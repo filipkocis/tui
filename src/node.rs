@@ -174,17 +174,19 @@ impl Canvas {
         let left = padding.2 as usize;
         let right = padding.3 as usize;
 
+        let max_len = self.buffer.iter().map(|line| line.len()).max().unwrap_or(0);
+
         for _ in 0..top {
             self.buffer.insert(
                 0,
                 Line {
-                    chars: vec![Char::Char(' '); self.buffer[0].len()],
+                    chars: vec![Char::Char(' '); max_len],
                 },
             );
         }
         for _ in 0..bottom {
             self.buffer.push(Line {
-                chars: vec![Char::Char(' '); self.buffer[0].len()],
+                chars: vec![Char::Char(' '); max_len],
             });
         }
 
