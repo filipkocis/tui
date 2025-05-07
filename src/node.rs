@@ -304,6 +304,23 @@ impl Canvas {
         }
     }
 
+    pub fn extend_child(&mut self, child: Canvas, style: &Style) {
+        let max_width = style.size.0 as usize;
+        let max_height = style.size.1 as usize;
+
+        if style.flex_row {
+        } else {
+            for mut line in child.buffer {
+                if self.height() >= max_height {
+                    break;
+                }
+
+                line.resize_to_fit(max_width);
+                self.buffer.push(line);
+            }
+        }
+    }
+
     pub fn render(&self) {
         for (i, line) in self.buffer.iter().enumerate() {
             let line = line.combine();
@@ -330,11 +347,17 @@ impl Node {
             + self.style.border.3 as usize
     }
 
-    pub fn render(&self) {
+    pub fn calculate_canvas(&self) -> Canvas {
         let mut canvas = Canvas {
             position: self.style.offset,
             buffer: vec![],
         };
+
+        for child in &self.children {
+            let child = child.borrow();
+            let child_canvas = child.calculate_canvas();
+            canvas.extend_child(child_canvas, &self.style);
+        }
 
         canvas.add_text(&self.content, self.style.size);
         canvas.add_padding(self.style.padding);
@@ -342,7 +365,14 @@ impl Node {
         canvas.add_bg(self.style.bg);
         canvas.add_border(self.style.border);
 
+        canvas
+    }
+
+    pub fn render(&self) {
+        let canvas = self.calculate_canvas();
         canvas.render();
+
+        for child in &self.children {}
 
         stdout().flush().unwrap();
     }
