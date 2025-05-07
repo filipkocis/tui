@@ -3,13 +3,16 @@ pub mod offset;
 
 use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
-use node::Node;
+use node::{Node, Viewport};
 
 use crossterm::{
     self,
     event::{self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
 };
 use offset::Offset;
 
@@ -17,6 +20,7 @@ pub struct App {
     raw: bool,
     alternate: bool,
     root: Rc<RefCell<Node>>,
+    viewport: Viewport,
 }
 
 impl App {
@@ -25,6 +29,7 @@ impl App {
             raw: true,
             alternate: true,
             root: Rc::new(RefCell::new(root)),
+            viewport: Viewport::new(),
         }
     }
 
@@ -51,14 +56,17 @@ impl App {
         Ok(())
     }
 
+    pub fn resize(&mut self, width: u16, height: u16) {
+        println!("{}", Clear(ClearType::All));
+        self.viewport.screen = (width, height);
+        let mut root = self.root.borrow_mut();
+        root.calculate_canvas(Offset::default());
+        root.render(self.viewport);
+    }
+
     pub fn run(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
-
-        {
-            let mut root = self.root.borrow_mut();
-            root.calculate_canvas(Offset::default());
-            root.render();
-        }
+        self.resize(self.viewport.screen.0, self.viewport.screen.1);
 
         loop {
             if event::poll(Duration::from_millis(100))? {
@@ -74,12 +82,13 @@ impl App {
                         println!("{event:?}");
                     }
                     Event::Resize(width, height) => {
+                        self.resize(width, height);
                         println!("Resize {width}x{height}")
                     }
                     event => println!("{event:?}"),
                 }
 
-                self.root.borrow().render();
+                self.root.borrow().render(self.viewport);
             }
         }
     }
