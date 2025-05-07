@@ -179,15 +179,15 @@ impl Canvas {
     }
 
     /// Add wrapped text
-    pub fn add_text(&mut self, text: &str, style: &Style) {
-        let width = style.size.0 as usize;
-        let height = style.size.1 as usize;
+    pub fn add_text(&mut self, text: &str, size: (u16, u16)) {
+        let width = size.0 as usize;
+        let height = size.1 as usize;
 
         if width == 0 || height == 0 || text.is_empty() {
             return;
         }
 
-        let lines = text.split('\n'); 
+        let lines = text.split('\n');
 
         for line in lines {
             let part_count = line.len() / width + if line.len() % width > 0 { 1 } else { 0 };
@@ -203,8 +203,6 @@ impl Canvas {
                 }
             }
         }
-
-        self.normalize(style);
     }
 
     pub fn add_bg(&mut self, color: Option<Color>) {
@@ -363,17 +361,15 @@ impl Canvas {
     }
 
     pub fn extend_child(&mut self, child: Canvas, style: &Style) {
-        let max_width = style.size.0 as usize;
         let max_height = style.size.1 as usize;
 
         if style.flex_row {
         } else {
-            for mut line in child.buffer {
+            for line in child.buffer {
                 if self.height() >= max_height {
                     break;
                 }
 
-                line.resize_to_fit(max_width);
                 self.buffer.push(line);
             }
         }
@@ -416,8 +412,9 @@ impl Node {
             let child_canvas = child.calculate_canvas();
             canvas.extend_child(child_canvas, &self.style);
         }
+        canvas.add_text(&self.content, self.style.size);
+        canvas.normalize(&self.style);
 
-        canvas.add_text(&self.content, &self.style);
         canvas.add_padding(self.style.padding);
         canvas.add_fg(self.style.fg);
         canvas.add_bg(self.style.bg);
