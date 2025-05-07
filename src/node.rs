@@ -360,17 +360,23 @@ impl Canvas {
         }
     }
 
-    pub fn extend_child(&mut self, child: Canvas, style: &Style) {
+    /// Extend the canvas with a blank copy of the child
+    pub fn extend_child(&mut self, child: &Canvas, style: &Style) {
         let max_height = style.size.1 as usize;
 
         if style.flex_row {
         } else {
-            for line in child.buffer {
+            let child_width = child.width().min(style.size.0 as usize);
+
+            for _ in 0..child.buffer.len() {
                 if self.height() >= max_height {
                     break;
                 }
 
-                self.buffer.push(line);
+                let blank_line = Line {
+                    chars: vec![Char::Char(' '); child_width],
+                };
+                self.buffer.push(blank_line);
             }
         }
     }
