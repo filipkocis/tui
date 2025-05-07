@@ -1,4 +1,5 @@
 pub mod node;
+pub mod offset;
 
 use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
@@ -10,6 +11,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use offset::Offset;
 
 pub struct App {
     raw: bool,
@@ -51,7 +53,12 @@ impl App {
 
     pub fn run(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
-        self.root.borrow().render();
+
+        {
+            let mut root = self.root.borrow_mut();
+            root.calculate_canvas(Offset::default());
+            root.render();
+        }
 
         loop {
             if event::poll(Duration::from_millis(100))? {
@@ -61,15 +68,15 @@ impl App {
                         KeyCode::Esc => {
                             return Ok(());
                         }
-                        event => println!("{event:?}")
-                    }
+                        event => println!("{event:?}"),
+                    },
                     Event::Mouse(event) => {
                         println!("{event:?}");
                     }
                     Event::Resize(width, height) => {
                         println!("Resize {width}x{height}")
-                    },
-                    event => println!("{event:?}")
+                    }
+                    event => println!("{event:?}"),
                 }
 
                 self.root.borrow().render();
