@@ -6,9 +6,11 @@ use std::{
 
 use crossterm::style::{self, Color, SetBackgroundColor, SetForegroundColor};
 
+use crate::offset::Offset;
+
 #[derive(Debug, Clone, Default)]
 pub struct Style {
-    pub offset: (u16, u16),
+    pub offset: Offset,
     pub size: (u16, u16),
 
     pub fg: Option<style::Color>,
@@ -41,6 +43,8 @@ pub struct Node {
     pub parent: Option<Rc<RefCell<Node>>>,
     pub children: Vec<Rc<RefCell<Node>>>,
     pub focus: bool,
+
+    canvas: Canvas,
 }
 
 #[derive(Debug, Clone)]
@@ -49,7 +53,7 @@ pub enum Char {
     Code(String),
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Line {
     pub chars: Vec<Char>,
 }
@@ -137,8 +141,11 @@ impl Line {
     }
 }
 
+#[derive(Debug, Default)]
 pub struct Canvas {
+    /// Absolute position of the canvas
     pub position: (u16, u16),
+    /// Content of the canvas
     pub buffer: Vec<Line>,
 }
 
@@ -407,16 +414,18 @@ impl Node {
             + self.style.border.3 as usize
     }
 
-    pub fn calculate_canvas(&self) -> Canvas {
+    pub fn calculate_canvas(&mut self, parent_position: Offset) {
+        let position = parent_position.add(self.style.offset);
+
         let mut canvas = Canvas {
-            position: self.style.offset,
+            position: position.tuple(),
             buffer: vec![],
         };
 
         for child in &self.children {
-            let child = child.borrow();
-            let child_canvas = child.calculate_canvas();
-            canvas.extend_child(child_canvas, &self.style);
+            let mut child = child.borrow_mut();
+            child.calculate_canvas(position);
+            canvas.extend_child(&child.canvas, &self.style);
         }
         canvas.add_text(&self.content, self.style.size);
         canvas.normalize(&self.style);
@@ -426,14 +435,16 @@ impl Node {
         canvas.add_bg(self.style.bg);
         canvas.add_border(self.style.border);
 
-        canvas
+        self.canvas = canvas;
     }
 
     pub fn render(&self) {
-        let canvas = self.calculate_canvas();
-        canvas.render();
+        self.canvas.render();
 
-        for child in &self.children {}
+        for child in &self.children {
+            let child = child.borrow();
+            child.render();
+        }
 
         stdout().flush().unwrap();
     }
