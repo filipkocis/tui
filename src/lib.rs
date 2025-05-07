@@ -18,23 +18,33 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(root: Node) -> io::Result<App> {
-        execute!(
-            io::stdout(),
-            EnterAlternateScreen,
-            EnableMouseCapture,
-            EnableFocusChange
-        )?;
-        enable_raw_mode()?;
-
-        Ok(App {
+    pub fn new(root: Node) -> Self {
+        App {
             raw: true,
             alternate: true,
             root,
-        })
+        }
+    }
+
+    fn prepare_screen(&mut self) -> io::Result<()> {
+        if self.alternate {
+            execute!(
+                io::stdout(),
+                EnterAlternateScreen,
+                EnableMouseCapture,
+                EnableFocusChange
+            )?
+        }
+
+        if self.raw {
+            enable_raw_mode()?
+        }
+
+        Ok(())
     }
 
     pub fn run(&mut self) -> io::Result<()> {
+        self.prepare_screen()?;
         self.root.render();
 
         loop {
