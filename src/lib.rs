@@ -1,6 +1,6 @@
 pub mod node;
 
-use std::{io, time::Duration};
+use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
 use node::Node;
 
@@ -14,7 +14,7 @@ use crossterm::{
 pub struct App {
     raw: bool,
     alternate: bool,
-    root: Node,
+    root: Rc<RefCell<Node>>,
 }
 
 impl App {
@@ -22,8 +22,14 @@ impl App {
         App {
             raw: true,
             alternate: true,
-            root,
+            root: Rc::new(RefCell::new(root)),
         }
+    }
+
+    pub fn add_child(&mut self, child: Node) {
+        let child = Rc::new(RefCell::new(child));
+        child.borrow_mut().parent = Some(self.root.clone());
+        self.root.borrow_mut().children.push(child);
     }
 
     fn prepare_screen(&mut self) -> io::Result<()> {
@@ -45,7 +51,7 @@ impl App {
 
     pub fn run(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
-        self.root.render();
+        self.root.borrow().render();
 
         loop {
             if event::poll(Duration::from_millis(100))? {
@@ -58,7 +64,7 @@ impl App {
                     }
                 }
 
-                self.root.render();
+                self.root.borrow().render();
             }
         }
     }
