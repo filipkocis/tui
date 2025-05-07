@@ -49,6 +49,7 @@ pub enum Char {
     Code(String),
 }
 
+#[derive(Default)]
 pub struct Line {
     pub chars: Vec<Char>,
 }
@@ -152,16 +153,41 @@ impl Canvas {
         self.buffer.len()
     }
 
+    /// Normalize the canvas buffer size
+    pub fn normalize(&mut self, style: &Style) {
+        let mut max_len = self.width();
+        let orig_height = self.height();
+        let mut max_height = self.height();
+
+        if style.grow {
+            // Set to style size
+            max_len = style.size.0 as usize;
+            max_height = style.size.1 as usize;
+        } else {
+            // Take min size, bound by style size
+            max_len = max_len.min(style.size.0 as usize);
+            max_height = max_height.min(style.size.1 as usize);
+        }
+
+        if orig_height != max_height {
+            self.buffer.resize_with(max_height, Default::default);
+        }
+
+        for line in &mut self.buffer {
+            line.resize_to_fit(max_len);
+        }
+    }
+
     /// Add wrapped text
-    pub fn add_text(&mut self, text: &str, size: (u16, u16)) {
-        if size.0 == 0 || size.1 == 0 || text.is_empty() {
+    pub fn add_text(&mut self, text: &str, style: &Style) {
+        let width = style.size.0 as usize;
+        let height = style.size.1 as usize;
+
+        if width == 0 || height == 0 || text.is_empty() {
             return;
         }
 
-        let lines = text.split('\n');
-        let width = size.0 as usize;
-        let height = size.1 as usize;
-        let mut max_len = 0;
+        let lines = text.split('\n'); 
 
         for line in lines {
             let part_count = line.len() / width + if line.len() % width > 0 { 1 } else { 0 };
@@ -172,20 +198,13 @@ impl Canvas {
 
                 let chars = part.chars().map(Char::Char).collect();
                 let line = Line { chars };
-                max_len = max_len.max(line.len());
                 if self.buffer.len() < height {
                     self.buffer.push(line);
                 }
             }
         }
 
-        self.buffer.iter_mut().for_each(|line| {
-            let len = line.len();
-            let diff = max_len.saturating_sub(len);
-            if diff > 0 {
-                line.chars.extend(vec![Char::Char(' '); diff]);
-            }
-        })
+        self.normalize(style);
     }
 
     pub fn add_bg(&mut self, color: Option<Color>) {
@@ -398,7 +417,7 @@ impl Node {
             canvas.extend_child(child_canvas, &self.style);
         }
 
-        canvas.add_text(&self.content, self.style.size);
+        canvas.add_text(&self.content, &self.style);
         canvas.add_padding(self.style.padding);
         canvas.add_fg(self.style.fg);
         canvas.add_bg(self.style.bg);
