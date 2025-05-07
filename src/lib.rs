@@ -55,13 +55,21 @@ impl App {
 
         loop {
             if event::poll(Duration::from_millis(100))? {
-                if let event::Event::Key(key) = event::read()? {
-                    match key.code {
-                        event::KeyCode::Esc => {
+                use event::*;
+                match event::read()? {
+                    Event::Key(event) => match event.code {
+                        KeyCode::Esc => {
                             return Ok(());
                         }
-                        _ => {}
+                        event => println!("{event:?}")
                     }
+                    Event::Mouse(event) => {
+                        println!("{event:?}");
+                    }
+                    Event::Resize(width, height) => {
+                        println!("Resize {width}x{height}")
+                    },
+                    event => println!("{event:?}")
                 }
 
                 self.root.borrow().render();
