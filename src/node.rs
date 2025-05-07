@@ -4,10 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crossterm::{
-    event::Event,
-    style::{self, Color, SetBackgroundColor, SetForegroundColor},
-};
+use crossterm::style::{self, Color, SetBackgroundColor, SetForegroundColor};
 
 #[derive(Debug, Clone, Default)]
 pub struct Style {
@@ -24,6 +21,9 @@ pub struct Style {
 
     pub padding: (u16, u16, u16, u16),
     pub border: (bool, bool, bool, bool, Option<Color>),
+
+    pub flex_row: bool,
+    pub grow: bool,
 }
 
 impl Style {
@@ -54,6 +54,7 @@ pub struct Line {
 }
 
 impl Line {
+    /// Returns the `char` length of the line
     pub fn len(&self) -> usize {
         self.chars
             .iter()
@@ -104,6 +105,34 @@ impl Line {
                 Char::Code(code) => code.clone(),
             })
             .collect()
+    }
+
+    /// Resize the line to fit exactly `len` in chars
+    fn resize_to_fit(&mut self, len: usize) {
+        let mut diff = len as isize - self.len() as isize;
+
+        if diff < 0 {
+            // Pop `diff` chars
+            while diff < 0 {
+                match self.chars.pop() {
+                    Some(Char::Char(_)) => diff += 1,
+                    Some(Char::Code(_)) => continue,
+                    None => break,
+                }
+            }
+
+            // Remove trailing codes
+            while matches!(self.chars.last(), Some(&Char::Code(_))) {
+                self.chars.pop();
+            }
+        }
+
+        // Add `diff` chars
+        if diff > 0 {
+            for _ in 0..diff {
+                self.chars.push(Char::Char(' '));
+            }
+        }
     }
 }
 
