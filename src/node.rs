@@ -113,9 +113,19 @@ pub struct Canvas {
 }
 
 impl Canvas {
+    /// Get the width of the canvas
+    pub fn width(&self) -> usize {
+        self.buffer.iter().map(|line| line.len()).max().unwrap_or(0)
+    }
+
+    /// Get the height of the canvas
+    pub fn height(&self) -> usize {
+        self.buffer.len()
+    }
+
     /// Add wrapped text
     pub fn add_text(&mut self, text: &str, size: (u16, u16)) {
-        if size.0 == 0 || size.1 == 0 {
+        if size.0 == 0 || size.1 == 0 || text.is_empty() {
             return;
         }
 
@@ -142,7 +152,7 @@ impl Canvas {
 
         self.buffer.iter_mut().for_each(|line| {
             let len = line.len();
-            let diff = max_len - len;
+            let diff = max_len.saturating_sub(len);
             if diff > 0 {
                 line.chars.extend(vec![Char::Char(' '); diff]);
             }
@@ -184,7 +194,7 @@ impl Canvas {
         let left = padding.2 as usize;
         let right = padding.3 as usize;
 
-        let max_len = self.buffer.iter().map(|line| line.len()).max().unwrap_or(0);
+        let max_len = self.width();
 
         for _ in 0..top {
             self.buffer.insert(
@@ -220,7 +230,7 @@ impl Canvas {
 
         let border_color = border.4;
         let set_fg_code = match border_color {
-            Some(color) => format!("{}", SetForegroundColor(color)), 
+            Some(color) => format!("{}", SetForegroundColor(color)),
             None => String::new(),
         };
         let clear_fg_code = format!("{}", SetForegroundColor(Color::Reset));
