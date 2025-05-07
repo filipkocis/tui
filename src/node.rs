@@ -4,7 +4,11 @@ use std::{
     rc::Rc,
 };
 
-use crossterm::style::{self, Color, SetBackgroundColor, SetForegroundColor};
+use crossterm::{
+    cursor,
+    style::{Color, SetBackgroundColor, SetForegroundColor},
+    terminal,
+};
 
 use crate::offset::Offset;
 
@@ -13,8 +17,8 @@ pub struct Style {
     pub offset: Offset,
     pub size: (u16, u16),
 
-    pub fg: Option<style::Color>,
-    pub bg: Option<style::Color>,
+    pub fg: Option<Color>,
+    pub bg: Option<Color>,
 
     pub bold: bool,
     pub underline: bool,
@@ -26,6 +30,7 @@ pub struct Style {
 
     pub flex_row: bool,
     pub grow: bool,
+    pub gap: (u16, u16),
 }
 
 impl Style {
@@ -102,14 +107,44 @@ impl Line {
         panic!("Index out of bounds");
     }
 
-    fn combine(&self) -> String {
-        self.chars
-            .iter()
-            .map(|c| match c {
-                Char::Char(c) => c.to_string(),
-                Char::Code(code) => code.clone(),
-            })
-            .collect()
+    /// Combines chars into a string, while skipping `start` Char::Chars and truncating to `end`
+    fn combine(&self, mut start: u16, end: u16) -> String {
+        let line_len = self.len();
+        if start >= end || start as usize >= line_len {
+            return String::new();
+        }
+
+        let mut result = String::new();
+        let mut char_count = 0;
+        let end = end as usize;
+        let clear_colors = format!(
+            "{}{}",
+            SetBackgroundColor(Color::Reset),
+            SetForegroundColor(Color::Reset)
+        );
+
+        for c in &self.chars {
+            if matches!(c, Char::Char(_)) {
+                char_count += 1;
+
+                if char_count > end {
+                    result.push_str(&clear_colors);
+                    break;
+                }
+
+                if start > 0 {
+                    start -= 1;
+                    continue;
+                }
+            }
+
+            match c {
+                Char::Char(c) => result.push(*c),
+                Char::Code(code) => result.push_str(code),
+            };
+        }
+
+        result
     }
 
     /// Resize the line to fit exactly `len` in chars
@@ -144,7 +179,7 @@ impl Line {
 #[derive(Debug, Default)]
 pub struct Canvas {
     /// Absolute position of the canvas
-    pub position: (u16, u16),
+    pub position: (i16, i16),
     /// Content of the canvas
     pub buffer: Vec<Line>,
 }
@@ -368,14 +403,15 @@ impl Canvas {
     }
 
     /// Extend the canvas with a blank copy of the child
-    pub fn extend_child(&mut self, child: &Canvas, style: &Style) {
+    pub fn extend_child(&mut self, child: &Canvas, style: &Style, include_gap: bool) {
         let max_height = style.size.1 as usize;
 
         if style.flex_row {
         } else {
             let child_width = child.width().min(style.size.0 as usize);
+            let gap_count = if include_gap { style.gap.1 as usize } else { 0 };
 
-            for _ in 0..child.buffer.len() {
+            for _ in 0..child.buffer.len() + gap_count {
                 if self.height() >= max_height {
                     break;
                 }
@@ -388,44 +424,89 @@ impl Canvas {
         }
     }
 
-    pub fn render(&self) {
+    pub fn render(&self, viewport: &Viewport) {
         for (i, line) in self.buffer.iter().enumerate() {
-            let line = line.combine();
-            let goto = crossterm::cursor::MoveTo(self.position.0, self.position.1 + i as u16);
+            let y = self.position.1 + i as i16;
+            if y < viewport.min.1 as i16 {
+                continue; // Skip lines above the viewport
+            }
+            if y as u16 >= viewport.max.1 {
+                break; // Skip lines below the viewport
+            }
+
+            let x = self.position.0;
+            let start = (viewport.min.0 as i16 - x).max(0) as u16;
+            let end = viewport.max.0 - viewport.min.0;
+
+            let line = line.combine(start, end);
+            let goto = cursor::MoveTo(x.max(0) as u16, y as u16);
             write!(stdout(), "{goto}{line}").unwrap();
         }
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Viewport {
+    pub min: (u16, u16),
+    pub max: (u16, u16),
+    pub screen: (u16, u16),
+}
+
+impl Viewport {
+    pub fn new() -> Self {
+        let (width, height) = terminal::size().unwrap();
+        Self {
+            min: (0, 0),
+            max: (width, height),
+            screen: (width, height),
+        }
+    }
+}
+
 impl Node {
-    pub fn width(&self) -> usize {
-        self.style.size.0 as usize
-            + self.style.padding.0 as usize
-            + self.style.padding.2 as usize
-            + self.style.border.0 as usize
-            + self.style.border.1 as usize
+    /// Max possible width of the node
+    pub fn max_width(&self) -> u16 {
+        self.style.size.0
+            + self.style.padding.2
+            + self.style.padding.3
+            + self.style.border.2 as u16
+            + self.style.border.3 as u16
     }
 
-    pub fn height(&self) -> usize {
-        self.style.size.1 as usize
-            + self.style.padding.1 as usize
-            + self.style.padding.3 as usize
-            + self.style.border.2 as usize
-            + self.style.border.3 as usize
+    /// Max possible height of the node
+    pub fn max_height(&self) -> u16 {
+        self.style.size.1
+            + self.style.padding.0
+            + self.style.padding.1
+            + self.style.border.0 as u16
+            + self.style.border.1 as u16
     }
 
     pub fn calculate_canvas(&mut self, parent_position: Offset) {
         let position = parent_position.add(self.style.offset);
+        let content_position = position.add_tuple((
+            self.style.padding.2 as i16 + self.style.border.2 as i16,
+            self.style.padding.0 as i16 + self.style.border.0 as i16,
+        ));
 
         let mut canvas = Canvas {
             position: position.tuple(),
             buffer: vec![],
         };
 
-        for child in &self.children {
+        let children_len = self.children.len();
+        let mut extra_offset = (0, 0);
+        for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
-            child.calculate_canvas(position);
-            canvas.extend_child(&child.canvas, &self.style);
+            child.calculate_canvas(content_position.add_tuple(extra_offset));
+
+            if self.style.flex_row {
+                extra_offset.0 += child.canvas.width() as i16 + self.style.gap.0 as i16;
+            } else {
+                extra_offset.1 += child.canvas.height() as i16 + self.style.gap.1 as i16;
+            }
+
+            canvas.extend_child(&child.canvas, &self.style, i < children_len - 1);
         }
         canvas.add_text(&self.content, self.style.size);
         canvas.normalize(&self.style);
@@ -438,12 +519,33 @@ impl Node {
         self.canvas = canvas;
     }
 
-    pub fn render(&self) {
-        self.canvas.render();
+    pub fn render(&self, mut viewport: Viewport) {
+        viewport.min = (
+            self.canvas.position.0.max(0) as u16,
+            self.canvas.position.1.max(0) as u16,
+        );
+
+        let max = (
+            (self.canvas.position.0 + self.max_width() as i16).max(0) as u16,
+            (self.canvas.position.1 + self.max_height() as i16).max(0) as u16,
+        );
+
+        let abs_max = if self.style.offset.is_absolute() {
+            viewport.screen
+        } else {
+            viewport.max
+        };
+
+        viewport.max = (max.0.min(abs_max.0), max.1.min(abs_max.1));
+
+        self.canvas.render(&viewport);
+
+        viewport.max.0 -= self.style.padding.3 + self.style.border.3 as u16;
+        viewport.max.1 -= self.style.padding.1 + self.style.border.1 as u16;
 
         for child in &self.children {
             let child = child.borrow();
-            child.render();
+            child.render(viewport);
         }
 
         stdout().flush().unwrap();
