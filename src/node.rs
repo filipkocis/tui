@@ -540,8 +540,12 @@ impl Node {
 
         self.canvas.render(&viewport);
 
-        viewport.max.0 -= self.style.padding.3 + self.style.border.3 as u16;
-        viewport.max.1 -= self.style.padding.1 + self.style.border.1 as u16;
+        if max.0 < viewport.screen.0 {
+            viewport.max.0 -= self.style.padding.3 + self.style.border.3 as u16;
+        }
+        if max.1 < viewport.screen.1 {
+            viewport.max.1 -= self.style.padding.1 + self.style.border.1 as u16;
+        }
 
         for child in &self.children {
             let child = child.borrow();
