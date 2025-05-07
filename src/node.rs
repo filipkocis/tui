@@ -540,12 +540,15 @@ impl Node {
 
         self.canvas.render(&viewport);
 
-        if max.0 < viewport.screen.0 {
-            viewport.max.0 -= self.style.padding.3 + self.style.border.3 as u16;
-        }
-        if max.1 < viewport.screen.1 {
-            viewport.max.1 -= self.style.padding.1 + self.style.border.1 as u16;
-        }
+        let overflow = (
+            max.0.saturating_sub(viewport.screen.0),
+            max.1.saturating_sub(viewport.screen.1),
+        );
+
+        viewport.max.0 -=
+            (self.style.padding.3 + self.style.border.3 as u16).saturating_sub(overflow.0);
+        viewport.max.1 -=
+            (self.style.padding.1 + self.style.border.1 as u16).saturating_sub(overflow.1);
 
         for child in &self.children {
             let child = child.borrow();
