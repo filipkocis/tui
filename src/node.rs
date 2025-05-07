@@ -122,6 +122,7 @@ impl Canvas {
         let lines = text.split('\n');
         let width = size.0 as usize;
         let height = size.1 as usize;
+        let mut max_len = 0;
 
         for line in lines {
             let part_count = line.len() / width + if line.len() % width > 0 { 1 } else { 0 };
@@ -132,11 +133,20 @@ impl Canvas {
 
                 let chars = part.chars().map(Char::Char).collect();
                 let line = Line { chars };
+                max_len = max_len.max(line.len());
                 if self.buffer.len() < height {
                     self.buffer.push(line);
                 }
             }
         }
+
+        self.buffer.iter_mut().for_each(|line| {
+            let len = line.len();
+            let diff = max_len - len;
+            if diff > 0 {
+                line.chars.extend(vec![Char::Char(' '); diff]);
+            }
+        })
     }
 
     pub fn add_bg(&mut self, color: Option<Color>) {
