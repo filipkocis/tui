@@ -436,7 +436,7 @@ impl Canvas {
 
             let x = self.position.0;
             let start = (viewport.min.0 as i16 - x).max(0) as u16;
-            let end = viewport.max.0 - viewport.min.0;
+            let end = viewport.max.0.saturating_sub(viewport.min.0);
 
             let line = line.combine(start, end);
             let goto = cursor::MoveTo(x.max(0) as u16, y as u16);
