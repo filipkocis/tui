@@ -520,11 +520,15 @@ impl Node {
             buffer: vec![],
         };
 
-        let children_len = self.children.len();
         let mut extra_offset = (0, 0);
+        let mut include_gap = false;
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
             child.calculate_canvas(content_position.add_tuple(extra_offset));
+
+            if child.style.offset.is_absolute() {
+                continue;
+            }
 
             if self.style.flex_row {
                 extra_offset.0 += child.canvas.width() as i16 + self.style.gap.0 as i16;
@@ -535,9 +539,11 @@ impl Node {
             canvas.extend_child(
                 &child.canvas,
                 &self.style,
-                i < children_len - 1,
+                include_gap,
                 self.style.flex_row && i == 0,
             );
+
+            include_gap = true;
         }
         canvas.add_text(&self.content, self.style.size);
         canvas.normalize(&self.style);
