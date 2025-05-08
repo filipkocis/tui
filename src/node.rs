@@ -411,6 +411,10 @@ impl Canvas {
         let child_width = child.width().min(style.size.0 as usize);
         let max_height = style.size.1 as usize;
 
+        if style.size.0 == 0 {
+            return;
+        }
+
         if style.flex_row {
             let gap_count = if include_gap { style.gap.0 as usize } else { 0 };
             let line_width = child_width + gap_count;
