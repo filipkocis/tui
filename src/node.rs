@@ -64,6 +64,11 @@ pub struct Line {
 }
 
 impl Line {
+    pub fn new(size: usize) -> Self {
+        let chars = vec![Char::Char(' '); size];
+        Self { chars }
+    }
+
     /// Returns the `char` length of the line
     pub fn len(&self) -> usize {
         self.chars
@@ -285,17 +290,10 @@ impl Canvas {
         let max_len = self.width();
 
         for _ in 0..top {
-            self.buffer.insert(
-                0,
-                Line {
-                    chars: vec![Char::Char(' '); max_len],
-                },
-            );
+            self.buffer.insert(0, Line::new(max_len));
         }
         for _ in 0..bottom {
-            self.buffer.push(Line {
-                chars: vec![Char::Char(' '); max_len],
-            });
+            self.buffer.push(Line::new(max_len));
         }
 
         for line in &mut self.buffer {
@@ -403,12 +401,39 @@ impl Canvas {
     }
 
     /// Extend the canvas with a blank copy of the child
-    pub fn extend_child(&mut self, child: &Canvas, style: &Style, include_gap: bool) {
+    pub fn extend_child(
+        &mut self,
+        child: &Canvas,
+        style: &Style,
+        include_gap: bool,
+        is_first_and_row: bool,
+    ) {
+        let child_width = child.width().min(style.size.0 as usize);
         let max_height = style.size.1 as usize;
 
         if style.flex_row {
+            let gap_count = if include_gap { style.gap.0 as usize } else { 0 };
+            let line_width = child_width + gap_count;
+
+            for i in 0..child.buffer.len() {
+                let blank_line = Line::new(line_width);
+
+                if is_first_and_row {
+                    if self.height() >= max_height {
+                        break;
+                    }
+
+                    self.buffer.push(blank_line);
+                } else {
+                    if i >= max_height {
+                        break;
+                    }
+
+                    let line = &mut self.buffer[i];
+                    line.chars.extend(blank_line.chars);
+                }
+            }
         } else {
-            let child_width = child.width().min(style.size.0 as usize);
             let gap_count = if include_gap { style.gap.1 as usize } else { 0 };
 
             for _ in 0..child.buffer.len() + gap_count {
@@ -416,10 +441,7 @@ impl Canvas {
                     break;
                 }
 
-                let blank_line = Line {
-                    chars: vec![Char::Char(' '); child_width],
-                };
-                self.buffer.push(blank_line);
+                self.buffer.push(Line::new(child_width));
             }
         }
     }
@@ -506,7 +528,12 @@ impl Node {
                 extra_offset.1 += child.canvas.height() as i16 + self.style.gap.1 as i16;
             }
 
-            canvas.extend_child(&child.canvas, &self.style, i < children_len - 1);
+            canvas.extend_child(
+                &child.canvas,
+                &self.style,
+                i < children_len - 1,
+                self.style.flex_row && i == 0,
+            );
         }
         canvas.add_text(&self.content, self.style.size);
         canvas.normalize(&self.style);
