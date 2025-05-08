@@ -1,9 +1,19 @@
-pub mod node;
-pub mod offset;
+mod node;
+mod style;
+mod offset;
+mod canvas;
+mod viewport;
+mod line;
+
+pub use node::Node;
+pub use style::Style;
+pub use offset::Offset;
+pub use canvas::Canvas;
+pub use viewport::Viewport;
+pub use line::{Line, Char};
 
 use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
-use node::{Node, Viewport};
 
 use crossterm::{
     self,
@@ -14,7 +24,6 @@ use crossterm::{
         LeaveAlternateScreen,
     },
 };
-use offset::Offset;
 
 pub struct App {
     raw: bool,
