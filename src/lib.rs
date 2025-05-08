@@ -57,7 +57,7 @@ impl App {
     }
 
     pub fn resize(&mut self, width: u16, height: u16) {
-        println!("{}", Clear(ClearType::All));
+        print!("{}", Clear(ClearType::All));
         self.viewport.screen = (width, height);
         let mut root = self.root.borrow_mut();
         root.calculate_canvas(Offset::default());
