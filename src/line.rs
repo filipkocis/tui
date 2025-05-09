@@ -1,9 +1,40 @@
-use crossterm::style::{Color, SetBackgroundColor, SetForegroundColor};
+use std::fmt::Display;
+
+use crossterm::style::{Attribute, Color, SetBackgroundColor, SetForegroundColor};
 
 #[derive(Debug, Clone)]
 pub enum Char {
     Char(char),
-    Code(String),
+    Code(Code),
+}
+
+impl Char {
+    #[inline]
+    pub fn is_code(&self) -> bool {
+        matches!(self, Char::Code(_))
+    }
+
+    #[inline]
+    pub fn is_char(&self) -> bool {
+        matches!(self, Char::Char(_))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Code {
+    Attribute(Attribute),
+    Background(Color),
+    Foreground(Color),
+}
+
+impl Display for Code {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Code::Attribute(attr) => write!(f, "{}", attr),
+            Code::Background(color) => write!(f, "{}", SetBackgroundColor(*color)),
+            Code::Foreground(color) => write!(f, "{}", SetForegroundColor(*color)),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -19,16 +50,13 @@ impl Line {
 
     /// Returns the `char` length of the line
     pub fn len(&self) -> usize {
-        self.chars
-            .iter()
-            .filter(|c| matches!(c, Char::Char(_)))
-            .count()
+        self.chars.iter().filter(|c| c.is_char()).count()
     }
 
     fn real_index(&self, index: usize) -> usize {
         let mut real_index = 0;
         for (i, c) in self.chars.iter().enumerate() {
-            if matches!(c, Char::Char(_)) {
+            if c.is_char() {
                 if real_index == index {
                     return i;
                 }
@@ -42,7 +70,7 @@ impl Line {
         let real_index = self.real_index(index);
         assert!(real_index < self.chars.len());
 
-        if matches!(char, Char::Code(_)) {
+        if char.is_code() {
             self.chars.insert(real_index, char);
         } else {
             self.chars[real_index] = char;
@@ -66,7 +94,7 @@ impl Line {
         );
 
         for c in &self.chars {
-            if matches!(c, Char::Char(_)) {
+            if c.is_char() {
                 char_count += 1;
 
                 if char_count > end {
@@ -82,7 +110,7 @@ impl Line {
 
             match c {
                 Char::Char(c) => result.push(*c),
-                Char::Code(code) => result.push_str(code),
+                Char::Code(code) => result.push_str(&code.to_string()),
             };
         }
 
@@ -104,7 +132,7 @@ impl Line {
             }
 
             // Remove trailing codes
-            while matches!(self.chars.last(), Some(&Char::Code(_))) {
+            while self.chars.last().map_or(false, |c| c.is_code()) {
                 self.chars.pop();
             }
         }
