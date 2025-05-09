@@ -1,19 +1,18 @@
-mod node;
-mod style;
-mod offset;
 mod canvas;
-mod viewport;
 mod line;
+mod node;
+mod offset;
+mod style;
+mod viewport;
 
-pub use node::Node;
-pub use style::Style;
-pub use offset::Offset;
 pub use canvas::Canvas;
+pub use line::{Char, Code, Line};
+pub use node::Node;
+pub use offset::Offset;
+pub use style::Style;
 pub use viewport::Viewport;
-pub use line::{Line, Char};
 
 use std::{cell::RefCell, io, rc::Rc, time::Duration};
-
 
 use crossterm::{
     self,

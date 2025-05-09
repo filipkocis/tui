@@ -1,8 +1,11 @@
 use std::io::{stdout, Write};
 
-use crossterm::{cursor, style::{Color, SetBackgroundColor, SetForegroundColor}};
+use crossterm::{
+    cursor,
+    style::{Color, SetBackgroundColor, SetForegroundColor},
+};
 
-use crate::{Char, Line, Style, Viewport};
+use crate::{Char, Code, Line, Style, Viewport};
 
 #[derive(Debug, Default)]
 pub struct Canvas {
@@ -81,11 +84,9 @@ impl Canvas {
             None => return,
         };
 
-        let set_bg_code = format!("{}", SetBackgroundColor(color));
-        let clear_bg_code = format!("{}", SetBackgroundColor(Color::Reset));
         for line in &mut self.buffer {
-            line.set(0, Char::Code(set_bg_code.clone()));
-            line.chars.push(Char::Code(clear_bg_code.clone()));
+            line.set(0, Char::Code(Code::Background(color)));
+            line.chars.push(Char::Code(Code::Background(Color::Reset)));
         }
     }
 
@@ -95,11 +96,9 @@ impl Canvas {
             None => return,
         };
 
-        let set_fg_code = format!("{}", SetForegroundColor(color));
-        let clear_fg_code = format!("{}", SetForegroundColor(Color::Reset));
         for line in &mut self.buffer {
-            line.set(0, Char::Code(set_fg_code.clone()));
-            line.chars.push(Char::Code(clear_fg_code.clone()));
+            line.set(0, Char::Code(Code::Foreground(color)));
+            line.chars.push(Char::Code(Code::Foreground(Color::Reset)));
         }
     }
 
@@ -138,11 +137,6 @@ impl Canvas {
         let has_right = border.3;
 
         let border_color = border.4;
-        let set_fg_code = match border_color {
-            Some(color) => format!("{}", SetForegroundColor(color)),
-            None => String::new(),
-        };
-        let clear_fg_code = format!("{}", SetForegroundColor(Color::Reset));
 
         let style_top = '─';
         let style_bottom = '─';
@@ -180,9 +174,14 @@ impl Canvas {
                 } else if i == lines - 1 && has_bottom {
                     line.chars.insert(0, Char::Char(style_left));
                 } else {
-                    line.chars.insert(0, Char::Code(clear_fg_code.clone()));
-                    line.chars.insert(0, Char::Char(style_left));
-                    line.chars.insert(0, Char::Code(set_fg_code.clone()));
+                    if let Some(color) = border_color {
+                        line.chars
+                            .insert(0, Char::Code(Code::Foreground(Color::Reset)));
+                        line.chars.insert(0, Char::Char(style_left));
+                        line.chars.insert(0, Char::Code(Code::Foreground(color)));
+                    } else {
+                        line.chars.insert(0, Char::Char(style_left));
+                    }
                 }
             }
 
@@ -196,9 +195,13 @@ impl Canvas {
 
         if has_right {
             for line in &mut self.buffer {
-                line.chars.push(Char::Code(set_fg_code.clone()));
-                line.chars.push(Char::Char(style_right));
-                line.chars.push(Char::Code(clear_fg_code.clone()));
+                if let Some(color) = border_color {
+                    line.chars.push(Char::Code(Code::Foreground(color)));
+                    line.chars.push(Char::Char(style_right));
+                    line.chars.push(Char::Code(Code::Foreground(Color::Reset)));
+                } else {
+                    line.chars.push(Char::Char(style_right));
+                }
             }
 
             let chars_len = self.buffer[0].len() - 1;
@@ -206,18 +209,18 @@ impl Canvas {
                 let line = &mut self.buffer[0];
                 line.set(chars_len, top_right);
 
-                if border_color.is_some() {
-                    line.set(0, Char::Code(set_fg_code.clone()));
-                    line.chars.push(Char::Code(clear_fg_code.clone()));
+                if let Some(color) = border_color {
+                    line.set(0, Char::Code(Code::Foreground(color)));
+                    line.chars.push(Char::Code(Code::Foreground(Color::Reset)));
                 }
             }
             if has_bottom {
                 let line = &mut self.buffer[lines - 1];
                 line.set(chars_len, bottom_right);
 
-                if border_color.is_some() {
-                    line.set(0, Char::Code(set_fg_code.clone()));
-                    line.chars.push(Char::Code(clear_fg_code.clone()));
+                if let Some(color) = border_color {
+                    line.set(0, Char::Code(Code::Foreground(color)));
+                    line.chars.push(Char::Code(Code::Foreground(Color::Reset)));
                 }
             }
         }
