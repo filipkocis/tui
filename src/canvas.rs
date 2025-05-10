@@ -16,6 +16,19 @@ pub struct Canvas {
 }
 
 impl Canvas {
+    pub fn new(width: usize, height: usize) -> Self {
+        let mut buffer = Vec::with_capacity(height);
+
+        for _ in 0..height {
+            buffer.push(Line::new(width));
+        }
+
+        Self {
+            position: (0, 0),
+            buffer,
+        }
+    }
+
     /// Get the width of the canvas
     pub fn width(&self) -> usize {
         self.buffer.iter().map(|line| line.len()).max().unwrap_or(0)
