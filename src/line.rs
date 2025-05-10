@@ -84,6 +84,31 @@ impl Line {
         codes.into_iter().collect()
     }
 
+    /// Returns all relevant reset codes to end the style at `real_index`
+    pub fn reset_codes_for(&self, real_index: usize) -> Vec<Code> {
+        let active_codes = self.active_codes_at(real_index);
+        let mut reset_codes = Vec::new();
+        let mut has_attr = false;
+
+        for code in active_codes {
+            if code.is_reset() {
+                continue;
+            }
+
+            if code.is_attribute() {
+                has_attr = true;
+            } else {
+                reset_codes.push(code.into_reset());
+            }
+        }
+
+        if has_attr {
+            reset_codes.push(Code::Attribute(Attribute::Reset));
+        }
+
+        reset_codes
+    }
+
     /// Resize the line to fit exactly `len` in chars
     pub fn resize_to_fit(&mut self, len: usize) {
         let mut diff = len as isize - self.len() as isize;
