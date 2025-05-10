@@ -112,3 +112,15 @@ impl Line {
         }
     }
 }
+
+impl Display for Line {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for c in &self.chars {
+            match c {
+                Char::Char(c) => write!(f, "{}", c)?,
+                Char::Code(code) => code.fmt(f)?,
+            }
+        }
+        Ok(())
+    }
+}
