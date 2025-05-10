@@ -109,6 +109,30 @@ impl Line {
         reset_codes
     }
 
+    /// Returns a new line with the chars between `start` and `end` (exclusive).
+    /// The new line will keep the correct codes at the start, all of them will be reset at the
+    /// end.
+    pub fn cutout(&self, start: usize, end: usize) -> Line {
+        let line_len = self.len();
+        let end = end.min(line_len);
+        if start >= end || start as usize >= line_len {
+            return Line::new(0);
+        }
+
+        let real_start = self.real_index(start);
+        let real_end = self.real_index(end - 1);
+
+        let active_codes = self.active_codes_at(real_start).into_iter().map(Char::Code);
+        let reset_codes = self.reset_codes_for(real_end).into_iter().map(Char::Code);
+
+        let mut line = Line::new(0);
+        line.chars.extend(active_codes);
+        line.chars
+            .extend(self.chars[real_start..=real_end].iter().cloned());
+        line.chars.extend(reset_codes);
+        line
+    }
+
     /// Resize the line to fit exactly `len` in chars
     pub fn resize_to_fit(&mut self, len: usize) {
         let mut diff = len as isize - self.len() as isize;
