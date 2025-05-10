@@ -44,44 +44,44 @@ impl Line {
         }
     }
 
-    /// Combines chars into a string, while skipping `start` Char::Chars and truncating to `end`
-    pub fn combine(&self, mut start: u16, end: u16) -> String {
-        let line_len = self.len();
-        if start >= end || start as usize >= line_len {
-            return String::new();
-        }
+    /// Returns all relevant codes active at `real_index`
+    pub fn active_codes_at(&self, real_index: usize) -> Vec<Code> {
+        let mut codes = HashSet::<Code>::new();
+        let mut bg = None;
+        let mut fg = None;
 
-        let mut result = String::new();
-        let mut char_count = 0;
-        let end = end as usize;
-        let clear_colors = format!(
-            "{}{}",
-            SetBackgroundColor(Color::Reset),
-            SetForegroundColor(Color::Reset)
-        );
-
-        for c in &self.chars {
-            if c.is_char() {
-                char_count += 1;
-
-                if char_count > end {
-                    result.push_str(&clear_colors);
-                    break;
-                }
-
-                if start > 0 {
-                    start -= 1;
-                    continue;
-                }
-            }
-
+        for c in &self.chars[..real_index] {
             match c {
-                Char::Char(c) => result.push(*c),
-                Char::Code(code) => result.push_str(&code.to_string()),
-            };
+                Char::Code(code) => match code {
+                    Code::Attribute(attr) => {
+                        if *attr == Attribute::Reset {
+                            codes.retain(|c| !c.is_attribute())
+                        } else {
+                            codes.insert(code.clone());
+                        }
+                    }
+                    Code::Background(color) => {
+                        if *color == Color::Reset {
+                            bg = None;
+                        } else {
+                            bg = Some(*color);
+                        }
+                    }
+                    Code::Foreground(color) => {
+                        if *color == Color::Reset {
+                            fg = None;
+                        } else {
+                            fg = Some(*color);
+                        }
+                    }
+                },
+                _ => {}
+            }
         }
 
-        result
+        bg.map(|color| codes.insert(Code::Background(color)));
+        fg.map(|color| codes.insert(Code::Foreground(color)));
+        codes.into_iter().collect()
     }
 
     /// Resize the line to fit exactly `len` in chars
