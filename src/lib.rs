@@ -20,16 +20,15 @@ use crossterm::{
     self,
     event::{self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture},
     execute,
-    terminal::{
-        disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
 pub struct App {
     raw: bool,
     alternate: bool,
     root: Rc<RefCell<Node>>,
+
+    canvas: Canvas,
     viewport: Viewport,
 }
 
@@ -39,6 +38,7 @@ impl App {
             raw: true,
             alternate: true,
             root: Rc::new(RefCell::new(root)),
+            canvas: Canvas::default(),
             viewport: Viewport::new(),
         }
     }
@@ -66,20 +66,30 @@ impl App {
         Ok(())
     }
 
-    pub fn resize(&mut self, width: u16, height: u16) {
-        print!("{}", Clear(ClearType::All));
+    pub fn resize(&mut self, width: u16, height: u16) -> io::Result<()> {
+        self.viewport.max = (width, height);
         self.viewport.screen = (width, height);
-        let mut root = self.root.borrow_mut();
-        root.calculate_canvas(Offset::default());
-        root.render(self.viewport);
+        self.canvas = Canvas::new(width as usize, height as usize);
+
+        self.root.borrow_mut().calculate_canvas(Offset::default());
+        self.render()
+    }
+
+    pub fn render(&mut self) -> io::Result<()> {
+        self.root
+            .borrow()
+            .render_to(self.viewport, &mut self.canvas);
+        // print!("{}", cursor::Hide);
+        self.canvas.render()?;
+        Ok(())
     }
 
     pub fn run(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
-        self.resize(self.viewport.screen.0, self.viewport.screen.1);
+        self.resize(self.viewport.screen.0, self.viewport.screen.1)?;
 
         loop {
-            if event::poll(Duration::from_millis(100))? {
+            if event::poll(Duration::from_millis(0))? {
                 use event::*;
                 match event::read()? {
                     Event::Key(event) => match event.code {
@@ -92,13 +102,13 @@ impl App {
                         println!("{event:?}");
                     }
                     Event::Resize(width, height) => {
-                        self.resize(width, height);
+                        self.resize(width, height)?;
                         println!("Resize {width}x{height}")
                     }
                     event => println!("{event:?}"),
                 }
 
-                self.root.borrow().render(self.viewport);
+                self.render()?;
             }
         }
     }
