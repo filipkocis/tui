@@ -21,16 +21,16 @@ impl Line {
     }
 
     fn real_index(&self, index: usize) -> usize {
-        let mut real_index = 0;
+        let mut char_count = 0;
         for (i, c) in self.chars.iter().enumerate() {
             if c.is_char() {
-                if real_index == index {
+                if char_count == index {
                     return i;
                 }
-                real_index += 1;
+                char_count += 1;
             }
         }
-        panic!("Index {index} {real_index} out of bounds");
+        panic!("Index {index} {char_count} out of bounds");
     }
 
     pub fn set(&mut self, index: usize, char: Char) {
