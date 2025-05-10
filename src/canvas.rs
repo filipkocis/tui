@@ -1,8 +1,9 @@
-use std::io::{stdout, Write};
+use std::io::{self, stdout, Write};
 
 use crossterm::{
     cursor,
-    style::{Color, SetBackgroundColor, SetForegroundColor},
+    style::{self, Color},
+    QueueableCommand,
 };
 
 use crate::{Char, Code, Line, Style, Viewport};
@@ -289,23 +290,54 @@ impl Canvas {
         }
     }
 
-    pub fn render(&self, viewport: &Viewport) {
+    /// Render self to the screen.
+    ///
+    /// # Note
+    /// It should be called on the root canvas only, children should use [`child.render_to(screen, root)`](Self::render_to)
+    pub fn render(&self) -> io::Result<()> {
+        let mut stdout = stdout();
+
         for (i, line) in self.buffer.iter().enumerate() {
             let y = self.position.1 + i as i16;
-            if y < viewport.min.1 as i16 {
-                continue; // Skip lines above the viewport
-            }
-            if y as u16 >= viewport.max.1 {
-                break; // Skip lines below the viewport
+            if y < 0 {
+                continue;
             }
 
-            let x = self.position.0;
-            let start = (viewport.min.0 as i16 - x).max(0) as u16;
-            let end = viewport.max.0.saturating_sub(viewport.min.0);
-
-            let line = line.combine(start, end);
-            let goto = cursor::MoveTo(x.max(0) as u16, y as u16);
-            write!(stdout(), "{goto}{line}").unwrap();
+            let print = style::Print(line);
+            let goto = cursor::MoveTo(self.position.0 as u16, y as u16);
+            stdout.queue(goto)?.queue(print)?;
         }
+
+        stdout.flush()
+    }
+
+    /// Render self to `canvas` within the given `viewport`.
+    pub fn render_to(&self, viewport: &Viewport, canvas: &mut Canvas) {
+        for (i, line) in self.buffer.iter().enumerate() {
+            let x = self.position.0;
+            let y = self.position.1 + i as i16;
+
+            if y as u16 >= viewport.max.1 {
+                break; // Skip all lines, we are below the viewport
+            }
+
+            canvas.paste_on_top(&line, (x, y), viewport);
+        }
+    }
+
+    /// Paste a line on top of the canvas at `position` within the `viewport`
+    pub fn paste_on_top(&mut self, line: &Line, position: (i16, i16), viewport: &Viewport) {
+        let x = position.0;
+        let y = position.1;
+
+        if y < viewport.min.1 as i16 || y as u16 >= viewport.max.1 {
+            return; // Outside of the viewport
+        }
+
+        let start = (viewport.min.0 as i16 - x).max(0) as usize;
+        let end = viewport.max.0.saturating_sub(viewport.min.0) as usize;
+        let line = line.cutout(start, end);
+
+        self.buffer[y as usize].paste_on_top(&line, x.max(0) as usize);
     }
 }
