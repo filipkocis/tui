@@ -1,8 +1,4 @@
-use std::{
-    cell::RefCell,
-    io::{stdout, Write},
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{offset::Offset, Canvas, Style, Viewport};
 
@@ -86,7 +82,8 @@ impl Node {
         self.canvas = canvas;
     }
 
-    pub fn render(&self, mut viewport: Viewport) {
+    /// Render the node and its children to `canvas` within the given `viewport`.
+    pub fn render_to(&self, mut viewport: Viewport, canvas: &mut Canvas) {
         viewport.min = (
             self.canvas.position.0.max(0) as u16,
             self.canvas.position.1.max(0) as u16,
@@ -105,7 +102,7 @@ impl Node {
 
         viewport.max = (max.0.min(abs_max.0), max.1.min(abs_max.1));
 
-        self.canvas.render(&viewport);
+        self.canvas.render_to(&viewport, canvas);
 
         let overflow = (
             max.0.saturating_sub(viewport.screen.0),
@@ -119,9 +116,7 @@ impl Node {
 
         for child in &self.children {
             let child = child.borrow();
-            child.render(viewport);
+            child.render_to(viewport, canvas);
         }
-
-        stdout().flush().unwrap();
     }
 }
