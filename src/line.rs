@@ -1,41 +1,8 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display};
 
-use crossterm::style::{Attribute, Color, SetBackgroundColor, SetForegroundColor};
+use crossterm::style::{Attribute, Color};
 
-#[derive(Debug, Clone)]
-pub enum Char {
-    Char(char),
-    Code(Code),
-}
-
-impl Char {
-    #[inline]
-    pub fn is_code(&self) -> bool {
-        matches!(self, Char::Code(_))
-    }
-
-    #[inline]
-    pub fn is_char(&self) -> bool {
-        matches!(self, Char::Char(_))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum Code {
-    Attribute(Attribute),
-    Background(Color),
-    Foreground(Color),
-}
-
-impl Display for Code {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Code::Attribute(attr) => write!(f, "{}", attr),
-            Code::Background(color) => write!(f, "{}", SetBackgroundColor(*color)),
-            Code::Foreground(color) => write!(f, "{}", SetForegroundColor(*color)),
-        }
-    }
-}
+use crate::{Char, Code};
 
 #[derive(Debug, Default)]
 pub struct Line {
