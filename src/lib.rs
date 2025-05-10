@@ -89,7 +89,9 @@ impl App {
         self.resize(self.viewport.screen.0, self.viewport.screen.1)?;
 
         loop {
-            if event::poll(Duration::from_millis(0))? {
+            let mut render = false;
+
+            while event::poll(Duration::from_millis(0))? {
                 use event::*;
                 match event::read()? {
                     Event::Key(event) => match event.code {
@@ -108,6 +110,10 @@ impl App {
                     event => println!("{event:?}"),
                 }
 
+                render = true;
+            }
+
+            if render {
                 self.render()?;
             }
         }
