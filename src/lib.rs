@@ -1,14 +1,14 @@
 mod canvas;
+mod char;
 mod line;
 mod node;
 mod offset;
 mod style;
 mod viewport;
-mod char;
 
 pub use canvas::Canvas;
-pub use line::Line;
 pub use char::{Char, Code};
+pub use line::Line;
 pub use node::Node;
 pub use offset::Offset;
 pub use style::Style;
