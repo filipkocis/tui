@@ -133,6 +133,42 @@ impl Line {
         line
     }
 
+    /// Paste another line on top of this one, starting at `start`.
+    pub fn paste_on_top(&mut self, other: &Line, start: usize) {
+        let other_len = other.len();
+        if other_len == 0 {
+            return;
+        }
+
+        let mut new_line = Line::new(0);
+
+        if start != 0 {
+            let real_start = self.real_index(start - 1);
+            let reset_codes = self.reset_codes_for(real_start);
+            new_line
+                .chars
+                .extend(self.chars[..=real_start].iter().cloned());
+            new_line
+                .chars
+                .extend(reset_codes.into_iter().map(Char::Code));
+        }
+
+        new_line.chars.extend(other.chars.iter().cloned());
+
+        if start + other_len < self.len() {
+            let real_end = self.real_index(start + other_len - 1);
+            let active_codes = self.active_codes_at(real_end);
+            new_line
+                .chars
+                .extend(active_codes.into_iter().map(Char::Code));
+            new_line
+                .chars
+                .extend(self.chars.iter().skip(real_end + 1).cloned());
+        }
+
+        self.chars = new_line.chars;
+    }
+
     /// Resize the line to fit exactly `len` in chars
     pub fn resize_to_fit(&mut self, len: usize) {
         let mut diff = len as isize - self.len() as isize;
