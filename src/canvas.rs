@@ -30,6 +30,14 @@ impl Canvas {
         }
     }
 
+    /// True if absolute position `X, Y` is within the canvas
+    pub fn hit_test(&self, x: i16, y: i16) -> bool {
+        x > self.position.0
+            && x < self.position.0 + self.width() as i16
+            && y > self.position.1
+            && y < self.position.1 + self.height() as i16
+    }
+
     /// Get the width of the canvas
     pub fn width(&self) -> usize {
         self.buffer.iter().map(|line| line.len()).max().unwrap_or(0)
