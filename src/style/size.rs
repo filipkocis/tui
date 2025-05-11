@@ -3,8 +3,8 @@
 pub enum SizeValue {
     /// Size determined by the contents of the node, the inner value is the computed size in cells
     Auto(u16),
-    /// Size in cells
-    Cells(u16),
+    /// Size in cells. The second value is the computed size in cells
+    Cells(u16, u16),
     /// Percentage of the parent node, or the viewport. The second value is the computed size in
     /// cells
     Percent(u16, u16),
@@ -26,7 +26,7 @@ impl SizeValue {
             let percent = &value[..value.len() - 1];
             percent.parse::<u16>().ok().map(|v| Self::percent(v))
         } else if value.matches(char::is_numeric).count() == value.len() {
-            value.parse::<u16>().ok().map(|v| Self::Cells(v))
+            value.parse::<u16>().ok().map(|v| Self::cells(v))
         } else {
             None
         }
@@ -42,12 +42,17 @@ impl SizeValue {
         SizeValue::Percent(value, 0)
     }
 
+    #[inline]
+    pub fn cells(value: u16) -> Self {
+        SizeValue::Cells(value, value)
+    }
+
     /// Gets the computed size in cells.
     #[inline]
     pub fn computed_size(self) -> u16 {
         match self {
             Self::Auto(v) => v,
-            Self::Cells(v) => v,
+            Self::Cells(_, v) => v,
             Self::Percent(_, v) => v,
         }
     }
@@ -55,9 +60,10 @@ impl SizeValue {
     /// Sets the computed size in cells for the current size value.
     #[inline]
     pub fn set_computed_size(self, value: u16) -> Self {
+        let value = value.min((i16::MAX / 2) as u16);
         match self {
             Self::Auto(_) => Self::Auto(value),
-            Self::Cells(_) => Self::Cells(value),
+            Self::Cells(c, _) => Self::Cells(c, value),
             Self::Percent(p, _) => Self::Percent(p, value),
         }
     }
@@ -69,7 +75,7 @@ impl SizeValue {
 
     #[inline]
     pub fn is_cells(self) -> bool {
-        matches!(self, SizeValue::Cells(_))
+        matches!(self, SizeValue::Cells(..))
     }
 
     #[inline]
@@ -102,12 +108,12 @@ impl Size {
 
     #[inline]
     pub fn from_cells(width: u16, height: u16) -> Self {
-        Size(SizeValue::Cells(width), SizeValue::Cells(height))
+        Size(SizeValue::cells(width), SizeValue::cells(height))
     }
 
     #[inline]
     pub fn from_percent(width: u16, height: u16) -> Self {
-        Size(SizeValue::Percent(width, 0), SizeValue::Percent(height, 0))
+        Size(SizeValue::percent(width), SizeValue::percent(height))
     }
 
     #[inline]
