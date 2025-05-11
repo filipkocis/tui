@@ -35,42 +35,6 @@ impl Node {
         NodeHandle::new(self)
     }
 
-    /// Returns the `total width - content` leaving horizontal padding and borders
-    #[inline]
-    pub fn extra_width(&self) -> u16 {
-        self.style
-            .padding
-            .left
-            .saturating_add(self.style.padding.right)
-            .saturating_add(self.style.border.2 as u16)
-            .saturating_add(self.style.border.3 as u16)
-    }
-
-    /// Returns the `total height - content` leaving vertical padding and borders
-    #[inline]
-    pub fn extra_height(&self) -> u16 {
-        self.style
-            .padding
-            .top
-            .saturating_add(self.style.padding.bottom)
-            .saturating_add(self.style.border.0 as u16)
-            .saturating_add(self.style.border.1 as u16)
-    }
-
-    /// Total computed width of the node
-    pub fn total_width(&self) -> u16 {
-        self.style
-            .clamped_width()
-            .saturating_add(self.extra_width())
-    }
-
-    /// Total computed height of the node
-    pub fn total_height(&self) -> u16 {
-        self.style
-            .clamped_height()
-            .saturating_add(self.extra_height())
-    }
-
     /// Returns whether absolute position `X, Y` is within the node's canvas. Does not check it's
     /// children
     #[inline]
@@ -167,8 +131,8 @@ impl Node {
         );
 
         let max = (
-            (self.canvas.position.0 + self.total_width() as i16).max(0) as u16,
-            (self.canvas.position.1 + self.total_height() as i16).max(0) as u16,
+            (self.canvas.position.0 + self.style.total_width() as i16).max(0) as u16,
+            (self.canvas.position.1 + self.style.total_height() as i16).max(0) as u16,
         );
 
         let abs_max = if self.style.offset.is_absolute() {

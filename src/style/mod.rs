@@ -1,10 +1,10 @@
 mod offset;
-mod size;
 mod padding;
+mod size;
 
 pub use offset::Offset;
-pub use size::{Size, SizeValue};
 pub use padding::Padding;
+pub use size::{Size, SizeValue};
 
 use crossterm::style::Color;
 
@@ -65,7 +65,37 @@ impl Style {
         self.size = self
             .size
             .compute_size(parent_size, u16::MAX)
-            .clamp_computed_size(self.min_size, self.max_size)
+            .clamp_computed_size(self.min_size, self.max_size);
+
+        // if self.size.
+    }
+
+    /// Returns the extra width (horizontal padding and borders)
+    #[inline]
+    pub fn extra_width(&self) -> u16 {
+        self.padding
+            .horizontal()
+            .saturating_add(self.border.2 as u16)
+            .saturating_add(self.border.3 as u16)
+    }
+
+    /// Returns the extra height (vertical padding and borders)
+    #[inline]
+    pub fn extra_height(&self) -> u16 {
+        self.padding
+            .vertical()
+            .saturating_add(self.border.0 as u16)
+            .saturating_add(self.border.1 as u16)
+    }
+
+    /// Total computed width
+    pub fn total_width(&self) -> u16 {
+        self.clamped_width().saturating_add(self.extra_width())
+    }
+
+    /// Total computed height
+    pub fn total_height(&self) -> u16 {
+        self.clamped_height().saturating_add(self.extra_height())
     }
 }
 
