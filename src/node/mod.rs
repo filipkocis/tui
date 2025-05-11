@@ -6,7 +6,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crossterm::event::Event;
 
-use crate::{Offset, Canvas, EventHandlers, IntoEventHandler, Style, Viewport};
+use crate::{Canvas, EventHandlers, IntoEventHandler, Offset, Size, Style, Viewport};
 
 #[derive(Debug, Default)]
 pub struct Node {
@@ -37,29 +37,33 @@ impl Node {
 
     /// Max possible computed width of the node
     pub fn max_width(&self) -> u16 {
-        self.style.size.width().computed_size()
-            + self.style.padding.2
-            + self.style.padding.3
-            + self.style.border.2 as u16
-            + self.style.border.3 as u16
+        self.style
+            .clamped_width()
+            .saturating_add(self.style.padding.2)
+            .saturating_add(self.style.padding.3)
+            .saturating_add(self.style.border.2 as u16)
+            .saturating_add(self.style.border.3 as u16)
     }
 
     /// Max possible computed height of the node
     pub fn max_height(&self) -> u16 {
-        self.style.size.height().computed_size()
-            + self.style.padding.0
-            + self.style.padding.1
-            + self.style.border.0 as u16
-            + self.style.border.1 as u16
+        self.style
+            .clamped_height()
+            .saturating_add(self.style.padding.0)
+            .saturating_add(self.style.padding.1)
+            .saturating_add(self.style.border.0 as u16)
+            .saturating_add(self.style.border.1 as u16)
     }
 
     /// Returns whether absolute position `X, Y` is within the node's canvas. Does not check it's
     /// children
+    #[inline]
     pub fn hit_test(&self, x: i16, y: i16) -> bool {
         self.canvas.hit_test(x, y)
     }
 
     /// Primitive calculation of `pos - node.canvas.position`, clamped to 0
+    #[inline]
     pub fn relative_position(&self, x: i16, y: i16) -> (u16, u16) {
         let x = x - self.canvas.position.0;
         let y = y - self.canvas.position.1;
@@ -67,12 +71,15 @@ impl Node {
         (x.max(0) as u16, y.max(0) as u16)
     }
 
-    pub fn calculate_canvas(&mut self, parent_position: Offset) {
+    /// Computes the node's canvas. This should be called before [rendering](Self::render_to)
+    pub fn calculate_canvas(&mut self, parent_position: Offset, parent_size: Size) {
         let position = parent_position.add(self.style.offset);
         let content_position = position.add_tuple((
             self.style.padding.2 as i16 + self.style.border.2 as i16,
             self.style.padding.0 as i16 + self.style.border.0 as i16,
         ));
+
+        self.style.compute_size_td(parent_size);
 
         let mut canvas = Canvas {
             position: position.tuple(),
@@ -83,7 +90,7 @@ impl Node {
         let mut include_gap = false;
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
-            child.calculate_canvas(content_position.add_tuple(extra_offset));
+            child.calculate_canvas(content_position.add_tuple(extra_offset), self.style.size);
 
             if child.style.offset.is_absolute() {
                 continue;
@@ -115,7 +122,8 @@ impl Node {
         self.canvas = canvas;
     }
 
-    /// Render the node and its children to `canvas` within the given `viewport`.
+    /// Render the node and its children to `canvas` within the given `viewport`. Node's canvas has to be
+    /// computed before calling this function.
     pub fn render_to(&self, mut viewport: Viewport, canvas: &mut Canvas) {
         viewport.min = (
             self.canvas.position.0.max(0) as u16,
@@ -142,10 +150,12 @@ impl Node {
             max.1.saturating_sub(viewport.screen.1),
         );
 
-        viewport.max.0 -=
-            (self.style.padding.3 + self.style.border.3 as u16).saturating_sub(overflow.0);
-        viewport.max.1 -=
-            (self.style.padding.1 + self.style.border.1 as u16).saturating_sub(overflow.1);
+        viewport.max.0 = viewport.max.0.saturating_sub(
+            (self.style.padding.3 + self.style.border.3 as u16).saturating_sub(overflow.0),
+        );
+        viewport.max.1 = viewport.max.1.saturating_sub(
+            (self.style.padding.1 + self.style.border.1 as u16).saturating_sub(overflow.1),
+        );
 
         for child in &self.children {
             let child = child.borrow();
@@ -180,6 +190,7 @@ impl Node {
         }
     }
 
+    #[inline]
     pub fn add_handler<F: IntoEventHandler>(&mut self, handler: F, is_capturing: bool) {
         self.handlers
             .borrow_mut()
