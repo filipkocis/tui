@@ -6,7 +6,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crossterm::event::Event;
 
-use crate::{offset::Offset, Canvas, EventHandlers, IntoEventHandler, Style, Viewport};
+use crate::{Offset, Canvas, EventHandlers, IntoEventHandler, Style, Viewport};
 
 #[derive(Debug, Default)]
 pub struct Node {

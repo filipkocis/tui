@@ -1,6 +1,8 @@
-use crossterm::style::Color;
+mod offset;
 
-use crate::Offset;
+pub use offset::Offset;
+
+use crossterm::style::Color;
 
 #[derive(Debug, Clone, Default)]
 pub struct Style {

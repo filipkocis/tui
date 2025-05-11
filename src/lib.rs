@@ -2,7 +2,6 @@ mod canvas;
 mod char;
 mod line;
 mod node;
-mod offset;
 mod style;
 mod viewport;
 mod handler;
@@ -14,8 +13,7 @@ pub use handler::{EventHandlers, IntoEventHandler};
 pub use char::{Char, Code};
 pub use line::Line;
 pub use node::{Node, NodeHandle};
-pub use offset::Offset;
-pub use style::Style;
+pub use style::{Style, Offset};
 pub use viewport::Viewport;
 
 use std::{io, time::Duration};
