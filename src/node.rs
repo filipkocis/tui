@@ -133,4 +133,37 @@ impl Node {
             child.render_to(viewport, canvas);
         }
     }
+
+    /// Propagate event down to children.
+    pub fn propagate_event(&mut self, event: &Event) {
+        let handled = self.handlers.clone().borrow_mut().handle(self, event, true);
+
+        if !handled {
+            for child in &self.children {
+                let mut child = child.borrow_mut();
+                child.propagate_event(event);
+            }
+        }
+    }
+
+    /// Bubble event up to the root node.
+    pub fn bubble_event(&mut self, event: &Event) {
+        let handled = self
+            .handlers
+            .clone()
+            .borrow_mut()
+            .handle(self, event, false);
+
+        if !handled {
+            if let Some(ref parent) = self.parent {
+                parent.borrow_mut().bubble_event(event);
+            }
+        }
+    }
+
+    pub fn add_handler<F: IntoEventHandler>(&mut self, handler: F, is_capturing: bool) {
+        self.handlers
+            .borrow_mut()
+            .add_handler(handler, is_capturing);
+    }
 }
