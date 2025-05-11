@@ -9,6 +9,9 @@ use crossterm::style::Color;
 #[derive(Debug, Clone, Default)]
 pub struct Style {
     pub offset: Offset,
+    /// Stacking order among siblings
+    pub z_index: i16,
+
     pub size: Size,
     pub min_size: Size,
     pub max_size: Size,

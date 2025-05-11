@@ -71,8 +71,28 @@ impl Node {
         (x.max(0) as u16, y.max(0) as u16)
     }
 
+    /// Sort children by z-index
+    #[inline]
+    pub fn z_sort_children(&mut self) {
+        self.children.sort_by(|a, b| {
+            let a = a.borrow();
+            let b = b.borrow();
+
+            if a.style.z_index == b.style.z_index {
+                a.style
+                    .offset
+                    .is_absolute()
+                    .cmp(&b.style.offset.is_absolute())
+            } else {
+                a.style.z_index.cmp(&b.style.z_index)
+            }
+        })
+    }
+
     /// Computes the node's canvas. This should be called before [rendering](Self::render_to)
     pub fn calculate_canvas(&mut self, parent_position: Offset, parent_size: Size) {
+        self.z_sort_children();
+
         let position = parent_position.add(self.style.offset);
         let content_position = position.add_tuple((
             self.style.padding.2 as i16 + self.style.border.2 as i16,
