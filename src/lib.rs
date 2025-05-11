@@ -5,16 +5,21 @@ mod node;
 mod offset;
 mod style;
 mod viewport;
+mod handler;
+mod elements;
 
+pub use elements::*;
 pub use canvas::Canvas;
+pub use handler::{EventHandlers, IntoEventHandler};
 pub use char::{Char, Code};
 pub use line::Line;
 pub use node::Node;
+use node::NodeHandle;
 pub use offset::Offset;
 pub use style::Style;
 pub use viewport::Viewport;
 
-use std::{cell::RefCell, io, rc::Rc, time::Duration};
+use std::{io, time::Duration};
 
 use crossterm::{
     self,
@@ -26,27 +31,21 @@ use crossterm::{
 pub struct App {
     raw: bool,
     alternate: bool,
-    root: Rc<RefCell<Node>>,
+    root: NodeHandle,
 
     canvas: Canvas,
     viewport: Viewport,
 }
 
 impl App {
-    pub fn new(root: Node) -> Self {
+    pub fn new(root: NodeHandle) -> Self {
         App {
             raw: true,
             alternate: true,
-            root: Rc::new(RefCell::new(root)),
+            root,
             canvas: Canvas::default(),
             viewport: Viewport::new(),
         }
-    }
-
-    pub fn add_child(&mut self, child: Node) {
-        let child = Rc::new(RefCell::new(child));
-        child.borrow_mut().parent = Some(self.root.clone());
-        self.root.borrow_mut().children.push(child);
     }
 
     fn prepare_screen(&mut self) -> io::Result<()> {

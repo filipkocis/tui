@@ -1,6 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{offset::Offset, Canvas, Style, Viewport};
+use crossterm::event::Event;
+
+use crate::{offset::Offset, Canvas, EventHandlers, IntoEventHandler, Style, Viewport};
 
 #[derive(Debug, Default)]
 pub struct Node {
@@ -8,14 +10,62 @@ pub struct Node {
     pub class: String,
     pub style: Style,
     pub content: String,
-    pub parent: Option<Rc<RefCell<Node>>>,
-    pub children: Vec<Rc<RefCell<Node>>>,
-    pub focus: bool,
+
+    parent: Option<NodeHandle>,
+    children: Vec<NodeHandle>,
+
+    /// Event handlers registered on this node. It's not public since eventhandlers take `self` as
+    /// an argument
+    handlers: Rc<RefCell<EventHandlers>>,
+
+    // pub focus_within: bool,
+    // pub hover_within: bool,
+    // pub focused: bool,
+    // pub hovered: bool,
 
     canvas: Canvas,
 }
 
+#[derive(Debug)]
+/// Handle to a node
+pub struct NodeHandle(pub(crate) Rc<RefCell<Node>>);
+
+impl NodeHandle {
+    /// Constructs a new handle from a node
+    pub fn new(node: Node) -> Self {
+        Self(Rc::new(RefCell::new(node)))
+    }
+
+    #[inline(always)]
+    fn inner(&self) -> &Rc<RefCell<Node>> {
+        &self.0
+    }
+
+    /// Immutably borrows the node
+    pub fn borrow(&self) -> std::cell::Ref<Node> {
+        self.inner().borrow()
+    }
+
+    /// Mutably borrows the node
+    pub fn borrow_mut(&self) -> std::cell::RefMut<Node> {
+        self.inner().borrow_mut()
+    }
+
+    /// Adds a child node to the current node.
+    pub fn add_child(&self, mut child: Node) {
+        child.parent = Some(Self(Rc::clone(self.inner())));
+        let child = NodeHandle::new(child);
+
+        self.borrow_mut().children.push(child);
+    }
+}
+
 impl Node {
+    /// Wraps the node in a [`NodeHandle`]
+    pub fn into_handle(self) -> NodeHandle {
+        NodeHandle::new(self)
+    }
+
     /// Max possible width of the node
     pub fn max_width(&self) -> u16 {
         self.style.size.0
