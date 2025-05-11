@@ -14,6 +14,7 @@ impl<F> IntoEventHandler for F
 where 
     F: FnMut(&Event, &mut Node) -> bool + 'static
 {
+    #[inline]
     fn into_event_handler(self) -> EventHandler {
         Box::new(self)
     }
@@ -35,6 +36,7 @@ impl Debug for EventHandlers {
 }
 
 impl EventHandlers {
+    #[inline]
     pub fn add_handler<F: IntoEventHandler>(&mut self, handler: F, is_capturing: bool) {
         let handler = handler.into_event_handler();
         if is_capturing {

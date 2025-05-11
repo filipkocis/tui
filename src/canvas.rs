@@ -44,6 +44,7 @@ impl Canvas {
     }
 
     /// Get the height of the canvas
+    #[inline]
     pub fn height(&self) -> usize {
         self.buffer.len()
     }
@@ -52,18 +53,20 @@ impl Canvas {
     pub fn normalize(&mut self, style: &Style) {
         let mut max_len = self.width();
         let orig_height = self.height();
-        let mut max_height = self.height();
+        let mut max_height = orig_height;
 
         let width = style.size.width().computed_size() as usize;
         let height = style.size.height().computed_size() as usize;
 
-        if style.grow {
-            // Set to style size
-            max_len = width;
-            max_height = height;
+        if style.size.width().is_cells() {
+            max_len = width
         } else {
-            // Take min size, bound by style size
             max_len = max_len.min(width);
+        }
+
+        if style.size.height().is_cells() {
+            max_height = height
+        } else {
             max_height = max_height.min(height);
         }
 
@@ -259,7 +262,9 @@ impl Canvas {
         include_gap: bool,
         is_first_and_row: bool,
     ) {
-        let child_width = child.width().min(style.size.width().computed_size() as usize);
+        let child_width = child
+            .width()
+            .min(style.size.width().computed_size() as usize);
         let max_height = style.size.height().computed_size() as usize;
 
         if style.size.width().computed_size() == 0 {
@@ -307,6 +312,7 @@ impl Canvas {
     /// It should be called on the root canvas only, children should use [`child.render_to(screen, root)`](Self::render_to)
     pub fn render(&self) -> io::Result<()> {
         let mut stdout = stdout();
+        stdout.queue(cursor::Hide)?;
 
         for (i, line) in self.buffer.iter().enumerate() {
             let y = self.position.1 + i as i16;
@@ -319,6 +325,7 @@ impl Canvas {
             stdout.queue(goto)?.queue(print)?;
         }
 
+        stdout.queue(cursor::Show)?;
         stdout.flush()
     }
 
