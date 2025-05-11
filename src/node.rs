@@ -52,10 +52,16 @@ impl NodeHandle {
     }
 
     /// Adds a child node to the current node.
-    pub fn add_child(&self, mut child: Node) {
+    pub fn add_child_node(&self, mut child: Node) {
         child.parent = Some(Self(Rc::clone(self.inner())));
         let child = NodeHandle::new(child);
 
+        self.borrow_mut().children.push(child);
+    }
+
+    /// Adds a child node handle to the current node.
+    pub fn add_child(&self, child: NodeHandle) {
+        child.borrow_mut().parent = Some(Self(Rc::clone(self.inner())));
         self.borrow_mut().children.push(child);
     }
 }
