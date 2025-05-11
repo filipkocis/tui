@@ -55,16 +55,16 @@ impl Canvas {
         let orig_height = self.height();
         let mut max_height = orig_height;
 
-        let width = style.size.width().computed_size() as usize;
-        let height = style.size.height().computed_size() as usize;
+        let width = style.size.width.computed_size() as usize;
+        let height = style.size.height.computed_size() as usize;
 
-        if style.size.width().is_auto() {
+        if style.size.width.is_auto() {
             max_len = max_len.min(width);
         } else {
             max_len = width
         }
 
-        if style.size.height().is_auto() {
+        if style.size.height.is_auto() {
             max_height = max_height.min(height);
         } else {
             max_height = height
@@ -81,8 +81,8 @@ impl Canvas {
 
     /// Add wrapped text
     pub fn add_text(&mut self, text: &str, size: Size) {
-        let width = size.width().computed_size() as usize;
-        let height = size.height().computed_size() as usize;
+        let width = size.width.computed_size() as usize;
+        let height = size.height.computed_size() as usize;
 
         if width == 0 || height == 0 || text.is_empty() {
             return;
@@ -262,12 +262,10 @@ impl Canvas {
         include_gap: bool,
         is_first_and_row: bool,
     ) {
-        let child_width = child
-            .width()
-            .min(style.size.width().computed_size() as usize);
-        let max_height = style.size.height().computed_size() as usize;
+        let child_width = child.width().min(style.size.width.computed_size() as usize);
+        let max_height = style.size.height.computed_size() as usize;
 
-        if style.size.width().computed_size() == 0 {
+        if style.size.width.computed_size() == 0 {
             return;
         }
 

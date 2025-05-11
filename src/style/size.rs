@@ -86,7 +86,10 @@ impl SizeValue {
 
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq)]
 /// Represents the size of a node's style, defined by its width and height.
-pub struct Size(pub SizeValue, pub SizeValue);
+pub struct Size {
+    pub width: SizeValue,
+    pub height: SizeValue,
+}
 
 impl Size {
     /// Parses strings into a [`Size`]
@@ -98,31 +101,21 @@ impl Size {
 
     #[inline]
     pub fn new(width: SizeValue, height: SizeValue) -> Self {
-        Size(width, height)
+        Size { width, height }
     }
 
     #[inline]
     pub fn new_from(width: impl Into<SizeValue>, height: impl Into<SizeValue>) -> Self {
-        Size(width.into(), height.into())
+        Size::new(width.into(), height.into())
     }
 
     #[inline]
     pub fn from_cells(width: u16, height: u16) -> Self {
-        Size(SizeValue::cells(width), SizeValue::cells(height))
+        Size::new(SizeValue::cells(width), SizeValue::cells(height))
     }
 
     #[inline]
     pub fn from_percent(width: u16, height: u16) -> Self {
-        Size(SizeValue::percent(width), SizeValue::percent(height))
-    }
-
-    #[inline]
-    pub fn width(&self) -> SizeValue {
-        self.0
-    }
-
-    #[inline]
-    pub fn height(&self) -> SizeValue {
-        self.1
+        Size::new(SizeValue::percent(width), SizeValue::percent(height))
     }
 }

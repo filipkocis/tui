@@ -42,19 +42,19 @@ impl Style {
     /// Returns `size.max(min).min(max)` for the width
     pub fn clamped_width(&self) -> u16 {
         self.size
-            .width()
+            .width
             .computed_size()
-            .min(self.max_size.width().computed_size())
-            .max(self.min_size.width().computed_size())
+            .min(self.max_size.width.computed_size())
+            .max(self.min_size.width.computed_size())
     }
 
     /// Returns `size.max(min).min(max)` for the height
     pub fn clamped_height(&self) -> u16 {
         self.size
-            .height()
+            .height
             .computed_size()
-            .min(self.max_size.height().computed_size())
-            .max(self.min_size.height().computed_size())
+            .min(self.max_size.height.computed_size())
+            .max(self.min_size.height.computed_size())
     }
 
     /// Computes `size, min, max` based on parent's size in a top-down manner.
@@ -102,18 +102,16 @@ impl Style {
 impl Size {
     /// Computes the size based on parent's size, if self is auto, default is used.
     pub fn compute_size(self, parent: Self, default: u16) -> Self {
-        let width = self.width().compute_size(parent.width(), default);
-        let height = self.height().compute_size(parent.height(), default);
-        Self(width, height)
+        let width = self.width.compute_size(parent.width, default);
+        let height = self.height.compute_size(parent.height, default);
+        Self::new(width, height)
     }
 
     /// Clamp computed size between min and max
     pub fn clamp_computed_size(self, min: Self, max: Self) -> Self {
-        let width = self.width().clamp_computed_size(min.width(), max.width());
-        let height = self
-            .height()
-            .clamp_computed_size(min.height(), max.height());
-        Self(width, height)
+        let width = self.width.clamp_computed_size(min.width, max.width);
+        let height = self.height.clamp_computed_size(min.height, max.height);
+        Self::new(width, height)
     }
 }
 
