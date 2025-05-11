@@ -34,6 +34,20 @@ impl Node {
             + self.style.border.1 as u16
     }
 
+    /// Returns whether absolute position `X, Y` is within the node's canvas. Does not check it's
+    /// children
+    pub fn hit_test(&self, x: i16, y: i16) -> bool {
+        self.canvas.hit_test(x, y)
+    }
+
+    /// Primitive calculation of `pos - node.canvas.position`, clamped to 0
+    pub fn relative_position(&self, x: i16, y: i16) -> (u16, u16) {
+        let x = x - self.canvas.position.0;
+        let y = y - self.canvas.position.1;
+
+        (x.max(0) as u16, y.max(0) as u16)
+    }
+
     pub fn calculate_canvas(&mut self, parent_position: Offset) {
         let position = parent_position.add(self.style.offset);
         let content_position = position.add_tuple((
