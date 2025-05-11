@@ -1,6 +1,6 @@
 use crossterm::style::Color;
 
-use crate::{node::NodeHandle, Node, Offset, Size, SizeValue};
+use crate::{node::NodeHandle, Node, Offset, Padding, Size, SizeValue};
 
 use super::{button::MouseClickHandler, Button};
 
@@ -27,7 +27,7 @@ impl Dialog {
     fn button(label: String, on_click: Option<MouseClickHandler>, bg: Option<Color>) -> Node {
         let mut node = Button::new(label, on_click);
         node.style.bg = bg;
-        node.style.padding = (0, 0, 2, 2);
+        node.style.padding = Padding::new(0, 2);
         node
     }
 
@@ -37,7 +37,7 @@ impl Dialog {
         buttons.style.size = Size::new(SizeValue::auto(), SizeValue::cells(1));
         buttons.style.flex_row = true;
         buttons.style.gap = (1, 1);
-        buttons.style.padding = (1, 0, 0, 0);
+        buttons.style.padding = Padding::top(1);
 
         buttons.into_handle()
     }
@@ -48,7 +48,7 @@ impl Dialog {
         container.style.offset = Offset::Absolute(0, y);
         container.style.size = Size::new(SizeValue::cells(30), SizeValue::auto());
         container.style.gap = (1, 1);
-        container.style.padding = (1, 1, 2, 2);
+        container.style.padding = Padding::new(1, 2);
         container.style.border = (
             true,
             true,

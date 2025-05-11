@@ -13,7 +13,7 @@ pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use line::Line;
 pub use node::{Node, NodeHandle};
-pub use style::{Offset, Size, SizeValue, Style};
+pub use style::{Offset, Padding, Size, SizeValue, Style};
 pub use viewport::Viewport;
 
 use std::{io, time::Duration};

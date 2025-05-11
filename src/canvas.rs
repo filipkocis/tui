@@ -6,7 +6,7 @@ use crossterm::{
     QueueableCommand,
 };
 
-use crate::{Char, Code, Line, Size, Style, Viewport};
+use crate::{Char, Code, Line, Padding, Size, Style, Viewport};
 
 #[derive(Debug, Default)]
 pub struct Canvas {
@@ -131,11 +131,11 @@ impl Canvas {
     }
 
     /// Add (top, bottom, left, right) padding
-    pub fn add_padding(&mut self, padding: (u16, u16, u16, u16)) {
-        let top = padding.0 as usize;
-        let bottom = padding.1 as usize;
-        let left = padding.2 as usize;
-        let right = padding.3 as usize;
+    pub fn add_padding(&mut self, padding: Padding) {
+        let top = padding.top as usize;
+        let bottom = padding.bottom as usize;
+        let left = padding.left as usize;
+        let right = padding.right as usize;
 
         let max_len = self.width();
 

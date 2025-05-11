@@ -1,8 +1,10 @@
 mod offset;
 mod size;
+mod padding;
 
 pub use offset::Offset;
 pub use size::{Size, SizeValue};
+pub use padding::Padding;
 
 use crossterm::style::Color;
 
@@ -24,7 +26,7 @@ pub struct Style {
     pub dim: bool,
     pub crossed: bool,
 
-    pub padding: (u16, u16, u16, u16),
+    pub padding: Padding,
     pub border: (bool, bool, bool, bool, Option<Color>),
 
     pub flex_row: bool,

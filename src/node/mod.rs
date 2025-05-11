@@ -40,8 +40,8 @@ impl Node {
     pub fn extra_width(&self) -> u16 {
         self.style
             .padding
-            .2
-            .saturating_add(self.style.padding.3)
+            .left
+            .saturating_add(self.style.padding.right)
             .saturating_add(self.style.border.2 as u16)
             .saturating_add(self.style.border.3 as u16)
     }
@@ -51,8 +51,8 @@ impl Node {
     pub fn extra_height(&self) -> u16 {
         self.style
             .padding
-            .0
-            .saturating_add(self.style.padding.1)
+            .top
+            .saturating_add(self.style.padding.bottom)
             .saturating_add(self.style.border.0 as u16)
             .saturating_add(self.style.border.1 as u16)
     }
@@ -111,8 +111,8 @@ impl Node {
 
         let position = parent_position.add(self.style.offset);
         let content_position = position.add_tuple((
-            self.style.padding.2 as i16 + self.style.border.2 as i16,
-            self.style.padding.0 as i16 + self.style.border.0 as i16,
+            self.style.padding.left as i16 + self.style.border.2 as i16,
+            self.style.padding.top as i16 + self.style.border.0 as i16,
         ));
 
         self.style.compute_size_td(parent_size);
@@ -187,10 +187,10 @@ impl Node {
         );
 
         viewport.max.0 = viewport.max.0.saturating_sub(
-            (self.style.padding.3 + self.style.border.3 as u16).saturating_sub(overflow.0),
+            (self.style.padding.right + self.style.border.3 as u16).saturating_sub(overflow.0),
         );
         viewport.max.1 = viewport.max.1.saturating_sub(
-            (self.style.padding.1 + self.style.border.1 as u16).saturating_sub(overflow.1),
+            (self.style.padding.bottom + self.style.border.1 as u16).saturating_sub(overflow.1),
         );
 
         for child in &self.children {
