@@ -58,16 +58,16 @@ impl Canvas {
         let width = style.size.width().computed_size() as usize;
         let height = style.size.height().computed_size() as usize;
 
-        if style.size.width().is_cells() {
-            max_len = width
-        } else {
+        if style.size.width().is_auto() {
             max_len = max_len.min(width);
+        } else {
+            max_len = width
         }
 
-        if style.size.height().is_cells() {
-            max_height = height
-        } else {
+        if style.size.height().is_auto() {
             max_height = max_height.min(height);
+        } else {
+            max_height = height
         }
 
         if orig_height != max_height {
