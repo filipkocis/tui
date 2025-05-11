@@ -1,19 +1,19 @@
 mod canvas;
 mod char;
+mod elements;
+mod handler;
 mod line;
 mod node;
 mod style;
 mod viewport;
-mod handler;
-mod elements;
 
-pub use elements::*;
 pub use canvas::Canvas;
-pub use handler::{EventHandlers, IntoEventHandler};
 pub use char::{Char, Code};
+pub use elements::*;
+pub use handler::{EventHandlers, IntoEventHandler};
 pub use line::Line;
 pub use node::{Node, NodeHandle};
-pub use style::{Style, Offset, Size, SizeValue};
+pub use style::{Offset, Size, SizeValue, Style};
 pub use viewport::Viewport;
 
 use std::{io, time::Duration};
@@ -67,7 +67,9 @@ impl App {
         self.viewport.screen = (width, height);
         self.canvas = Canvas::new(width as usize, height as usize);
 
-        self.root.borrow_mut().calculate_canvas(Offset::default());
+        self.root
+            .borrow_mut()
+            .calculate_canvas(Offset::default(), Size::from_cells(width, height));
         self.render()
     }
 
@@ -75,7 +77,6 @@ impl App {
         self.root
             .borrow()
             .render_to(self.viewport, &mut self.canvas);
-        // print!("{}", cursor::Hide);
         self.canvas.render()?;
         Ok(())
     }
