@@ -19,6 +19,7 @@ impl Dialog {
     fn message(message: String) -> Node {
         let mut node = Node::default();
         node.content = message;
+        node.style.max_size = Size::new(SizeValue::percent(100), SizeValue::auto());
         node
     }
 
@@ -33,12 +34,10 @@ impl Dialog {
     /// Returns a container node for buttons
     fn buttons_container() -> NodeHandle {
         let mut buttons = Node::default();
-        // buttons.style.size = (1_000, 1);
-        buttons.style.size = Size::new(SizeValue::auto(), SizeValue::Cells(1));
-        buttons.style.grow = true;
+        buttons.style.size = Size::new(SizeValue::auto(), SizeValue::cells(1));
         buttons.style.flex_row = true;
         buttons.style.gap = (1, 1);
-        buttons.style.padding = (2, 0, 0, 0);
+        buttons.style.padding = (1, 0, 0, 0);
 
         buttons.into_handle()
     }
@@ -47,9 +46,7 @@ impl Dialog {
     fn container(y: i16) -> NodeHandle {
         let mut container = Node::default();
         container.style.offset = Offset::Absolute(0, y);
-        // container.style.size = (30, 7);
-        container.style.size = Size::new(SizeValue::Cells(30), SizeValue::auto());
-        container.style.grow = true;
+        container.style.size = Size::new(SizeValue::cells(30), SizeValue::auto());
         container.style.gap = (1, 1);
         container.style.padding = (1, 1, 2, 2);
         container.style.border = (
