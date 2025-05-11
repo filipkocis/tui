@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyModifiers, MouseButton, MouseEventKind};
 
-use crate::{IntoEventHandler, Node};
+use crate::{IntoEventHandler, Node, Size};
 
 pub struct Button;
 
@@ -45,7 +45,7 @@ impl Button {
         let len = label.len() as u16;
 
         node.content = label;
-        node.style.size = (len, 1);
+        node.style.size = Size::from_cells(len, 1);
         node.style.grow = true; 
 
         // node.add_handler(

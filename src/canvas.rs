@@ -6,7 +6,7 @@ use crossterm::{
     QueueableCommand,
 };
 
-use crate::{Char, Code, Line, Style, Viewport};
+use crate::{Char, Code, Line, Size, Style, Viewport};
 
 #[derive(Debug, Default)]
 pub struct Canvas {
@@ -54,14 +54,17 @@ impl Canvas {
         let orig_height = self.height();
         let mut max_height = self.height();
 
+        let width = style.size.width().computed_size() as usize;
+        let height = style.size.height().computed_size() as usize;
+
         if style.grow {
             // Set to style size
-            max_len = style.size.0 as usize;
-            max_height = style.size.1 as usize;
+            max_len = width;
+            max_height = height;
         } else {
             // Take min size, bound by style size
-            max_len = max_len.min(style.size.0 as usize);
-            max_height = max_height.min(style.size.1 as usize);
+            max_len = max_len.min(width);
+            max_height = max_height.min(height);
         }
 
         if orig_height != max_height {
@@ -74,9 +77,9 @@ impl Canvas {
     }
 
     /// Add wrapped text
-    pub fn add_text(&mut self, text: &str, size: (u16, u16)) {
-        let width = size.0 as usize;
-        let height = size.1 as usize;
+    pub fn add_text(&mut self, text: &str, size: Size) {
+        let width = size.width().computed_size() as usize;
+        let height = size.height().computed_size() as usize;
 
         if width == 0 || height == 0 || text.is_empty() {
             return;
@@ -256,10 +259,10 @@ impl Canvas {
         include_gap: bool,
         is_first_and_row: bool,
     ) {
-        let child_width = child.width().min(style.size.0 as usize);
-        let max_height = style.size.1 as usize;
+        let child_width = child.width().min(style.size.width().computed_size() as usize);
+        let max_height = style.size.height().computed_size() as usize;
 
-        if style.size.0 == 0 {
+        if style.size.width().computed_size() == 0 {
             return;
         }
 

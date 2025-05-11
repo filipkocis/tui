@@ -35,18 +35,18 @@ impl Node {
         NodeHandle::new(self)
     }
 
-    /// Max possible width of the node
+    /// Max possible computed width of the node
     pub fn max_width(&self) -> u16 {
-        self.style.size.0
+        self.style.size.width().computed_size()
             + self.style.padding.2
             + self.style.padding.3
             + self.style.border.2 as u16
             + self.style.border.3 as u16
     }
 
-    /// Max possible height of the node
+    /// Max possible computed height of the node
     pub fn max_height(&self) -> u16 {
-        self.style.size.1
+        self.style.size.height().computed_size()
             + self.style.padding.0
             + self.style.padding.1
             + self.style.border.0 as u16

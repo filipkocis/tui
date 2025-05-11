@@ -1,8 +1,8 @@
 use crossterm::style::Color;
 
-use crate::{node::NodeHandle, Node, Offset};
+use crate::{node::NodeHandle, Node, Offset, Size, SizeValue};
 
-use super::{button::MouseClickHandler, Button, MouseClickEvent};
+use super::{button::MouseClickHandler, Button};
 
 pub struct Dialog;
 
@@ -10,23 +10,15 @@ impl Dialog {
     /// Returns a title text node
     fn title(title: String) -> Node {
         let mut node = Node::default();
-        let len = title.len() as u16;
-
         node.content = title;
-        node.style.size = (len, 2);
         node.style.bold = true;
-
         node
     }
 
     /// Returns a message text node
     fn message(message: String) -> Node {
         let mut node = Node::default();
-        let len = message.len() as u16;
-
         node.content = message;
-        node.style.size = (len, len);
-
         node
     }
 
@@ -41,7 +33,8 @@ impl Dialog {
     /// Returns a container node for buttons
     fn buttons_container() -> NodeHandle {
         let mut buttons = Node::default();
-        buttons.style.size = (1_000, 1);
+        // buttons.style.size = (1_000, 1);
+        buttons.style.size = Size::new(SizeValue::auto(), SizeValue::Cells(1));
         buttons.style.grow = true;
         buttons.style.flex_row = true;
         buttons.style.gap = (1, 1);
@@ -54,7 +47,8 @@ impl Dialog {
     fn container(y: i16) -> NodeHandle {
         let mut container = Node::default();
         container.style.offset = Offset::Absolute(0, y);
-        container.style.size = (30, 7);
+        // container.style.size = (30, 7);
+        container.style.size = Size::new(SizeValue::Cells(30), SizeValue::auto());
         container.style.grow = true;
         container.style.gap = (1, 1);
         container.style.padding = (1, 1, 2, 2);

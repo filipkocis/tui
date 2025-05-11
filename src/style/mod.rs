@@ -1,13 +1,15 @@
 mod offset;
+mod size;
 
 pub use offset::Offset;
+pub use size::{Size, SizeValue};
 
 use crossterm::style::Color;
 
 #[derive(Debug, Clone, Default)]
 pub struct Style {
     pub offset: Offset,
-    pub size: (u16, u16),
+    pub size: Size,
 
     pub fg: Option<Color>,
     pub bg: Option<Color>,
