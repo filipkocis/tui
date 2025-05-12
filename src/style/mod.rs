@@ -67,7 +67,18 @@ impl Style {
             .compute_size(parent_size, u16::MAX)
             .clamp_computed_size(self.min_size, self.max_size);
 
-        // if self.size.
+        // subtract padding and borders from percentages
+        if self.size.width.is_percent() {
+            let size = self.size.width.computed_size();
+            let new_size = size.saturating_sub(self.extra_width());
+            self.size.width = self.size.width.set_computed_size(new_size);
+        }
+
+        if self.size.height.is_percent() {
+            let size = self.size.height.computed_size();
+            let new_size = size.saturating_sub(self.extra_height());
+            self.size.height = self.size.height.set_computed_size(new_size);
+        }
     }
 
     /// Returns the extra width (horizontal padding and borders)
