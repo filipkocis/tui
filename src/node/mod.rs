@@ -69,12 +69,42 @@ impl Node {
         })
     }
 
+    /// Returns the available content size for this node, it's the content size minus any gaps
+    #[inline]
+    pub fn available_content_size(&self) -> Size {
+        let (gap_column, gap_row) = self.style.gap;
+        let gap_count = self
+            .children
+            .iter()
+            .filter(|n| n.borrow().style.offset.is_translate())
+            .count()
+            .saturating_sub(1) as u16;
+        let mut size = self.style.size;
+
+        if self.style.flex_row && gap_column > 0 {
+            let gaps = gap_column * gap_count;
+            size.width = size
+                .width
+                .set_computed_size(size.width.computed_size().saturating_sub(gaps))
+        } else if !self.style.flex_row && gap_row > 0 {
+            let gaps = gap_row * gap_count;
+            size.height = size
+                .height
+                .set_computed_size(size.height.computed_size().saturating_sub(gaps))
+        }
+
+        size
+    }
+
     /// Computes the node's canvas. This should be called before [rendering](Self::render_to)
+    ///
+    /// - `parent_position` is the start of this node's canvas.
+    /// - `parent_size` is the available parent's content size for this child to grow into.
     pub fn calculate_canvas(&mut self, parent_position: Offset, parent_size: Size) {
         self.z_sort_children();
 
-        let position = parent_position.add(self.style.offset);
-        let content_position = position.add_tuple((
+        let offset_position = parent_position.add(self.style.offset);
+        let content_position = offset_position.add_tuple((
             self.style.padding.left as i16 + self.style.border.2 as i16,
             self.style.padding.top as i16 + self.style.border.0 as i16,
         ));
@@ -82,15 +112,17 @@ impl Node {
         self.style.compute_size_td(parent_size);
 
         let mut canvas = Canvas {
-            position: position.tuple(),
+            position: offset_position.tuple(),
             buffer: vec![],
         };
 
+        let available_content_size = self.available_content_size();
         let mut extra_offset = (0, 0);
         let mut include_gap = false;
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
-            child.calculate_canvas(content_position.add_tuple(extra_offset), self.style.size);
+            let child_start_position = content_position.add_tuple(extra_offset);
+            child.calculate_canvas(child_start_position, available_content_size);
 
             if child.style.offset.is_absolute() {
                 continue;
