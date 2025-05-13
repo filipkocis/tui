@@ -28,7 +28,6 @@ pub struct NodeHandle(pub(crate) Rc<RefCell<Node>>);
 
 impl NodeHandle {
     /// Constructs a new handle from a node
-    #[inline]
     pub fn new(node: Node) -> Self {
         Self(Rc::new(RefCell::new(node)))
     }

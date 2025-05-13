@@ -8,9 +8,43 @@ use crossterm::event::Event;
 
 use crate::{Canvas, EventHandlers, IntoEventHandler, Offset, Size, Style, Viewport};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Unique node id
+pub struct NodeId(u64);
+
+impl NodeId {
+    /// Thread-safe unique id generator using atomic operations
+    fn generate_id() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+
+        static ID: AtomicU64 = AtomicU64::new(0);
+        Self(ID.fetch_add(1, Ordering::Relaxed))
+    }
+
+    /// Creates a unique node id
+    #[inline]
+    pub fn new() -> Self {
+        Self::generate_id()
+    }
+
+    /// Returns the id as a u64
+    #[inline]
+    pub fn get(&self) -> u64 {
+        self.0
+    }
+}
+
+impl Default for NodeId {
+    fn default() -> Self {
+        Self::generate_id()
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Node {
-    pub id: String,
+    id: NodeId,
+    pub name: String,
+
     pub class: String,
     pub style: Style,
     pub content: String,
@@ -33,6 +67,12 @@ impl Node {
     /// Wraps the node in a [`NodeHandle`]
     pub fn into_handle(self) -> NodeHandle {
         NodeHandle::new(self)
+    }
+
+    /// Get the node's unique id
+    #[inline]
+    pub fn id(&self) -> NodeId {
+        self.id
     }
 
     /// Returns whether absolute position `X, Y` is within the node's canvas. Does not check it's
