@@ -99,23 +99,27 @@ impl Size {
         Self::new(width, height).into()
     }
 
+    /// Creates a new [`Size`] from [`SizeValue`]s.
     #[inline]
     pub fn new(width: SizeValue, height: SizeValue) -> Self {
         Size { width, height }
     }
 
-    #[inline]
-    pub fn new_from(width: impl Into<SizeValue>, height: impl Into<SizeValue>) -> Self {
-        Size::new(width.into(), height.into())
-    }
-
+    /// Creates a new [`Size`] from cell values.
     #[inline]
     pub fn from_cells(width: u16, height: u16) -> Self {
         Size::new(SizeValue::cells(width), SizeValue::cells(height))
     }
 
+    /// Creates a new [`Size`] from percentage values.
     #[inline]
     pub fn from_percent(width: u16, height: u16) -> Self {
         Size::new(SizeValue::percent(width), SizeValue::percent(height))
+    }
+
+    /// Returns a tuple of the computed size in cells (width, height)
+    #[inline]
+    pub fn tuple(self) -> (u16, u16) {
+        (self.width.computed_size(), self.height.computed_size())
     }
 }
