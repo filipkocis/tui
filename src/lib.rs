@@ -69,7 +69,7 @@ impl App {
 
         self.root
             .borrow_mut()
-            .calculate_canvas(Offset::default(), Size::from_cells(width, height));
+            .compute(Offset::default(), Size::from_cells(width, height));
         self.render()
     }
 

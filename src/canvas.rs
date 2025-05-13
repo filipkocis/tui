@@ -51,31 +51,17 @@ impl Canvas {
 
     /// Normalize the canvas buffer size
     pub fn normalize(&mut self, style: &Style) {
-        let mut max_len = self.width();
-        let orig_height = self.height();
-        let mut max_height = orig_height;
+        let canvas_height = self.height();
 
         let width = style.size.width.computed_size() as usize;
         let height = style.size.height.computed_size() as usize;
 
-        if style.size.width.is_auto() {
-            max_len = max_len.min(width);
-        } else {
-            max_len = width
-        }
-
-        if style.size.height.is_auto() {
-            max_height = max_height.min(height);
-        } else {
-            max_height = height
-        }
-
-        if orig_height != max_height {
-            self.buffer.resize_with(max_height, Default::default);
+        if canvas_height != height {
+            self.buffer.resize_with(height, Default::default);
         }
 
         for line in &mut self.buffer {
-            line.resize_to_fit(max_len);
+            line.resize_to_fit(width);
         }
     }
 

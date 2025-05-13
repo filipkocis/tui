@@ -57,28 +57,127 @@ impl Style {
             .max(self.min_size.height.computed_size())
     }
 
-    /// Computes `size, min, max` based on parent's size in a top-down manner.
-    pub fn compute_size_td(&mut self, parent_size: Size) {
-        self.min_size = self.min_size.compute_size(parent_size, 0);
-        self.max_size = self.max_size.compute_size(parent_size, u16::MAX);
+    const DEFAULT_MIN_SIZE: (u16, u16) = (0, 0);
+    const DEFAULT_MAX_SIZE: (u16, u16) = (u16::MAX, u16::MAX);
 
-        self.size = self
-            .size
-            .compute_size(parent_size, u16::MAX)
-            .clamp_computed_size(self.min_size, self.max_size);
+    /// Calculates percentage sizes, applies clamping, and calculates wrapped text height (if auto)
+    ///
+    /// # Note
+    /// For the time being, this function returns text's width and height, later it should be
+    /// calculated inside a Text struct and stored inside of it, this function should not calculate
+    /// the text and return the result. Result is only for auto sizes
+    pub fn compute_percentage_size(&mut self, parent_size: Size, text: &str) -> (u16, u16) {
+        // Calc min max
+        self.min_size = self
+            .min_size
+            .compute_size(parent_size, Self::DEFAULT_MIN_SIZE);
+        self.max_size = self
+            .max_size
+            .compute_size(parent_size, Self::DEFAULT_MAX_SIZE);
+
+        // Calc size
+        let Size {
+            mut width,
+            mut height,
+        } = self.size.compute_size(parent_size, self.size.tuple());
 
         // subtract padding and borders from percentages
-        if self.size.width.is_percent() {
-            let size = self.size.width.computed_size();
+        if width.is_percent() {
+            let size = width.computed_size();
             let new_size = size.saturating_sub(self.extra_width());
-            self.size.width = self.size.width.set_computed_size(new_size);
+            width = width.set_computed_size(new_size);
+        }
+        if height.is_percent() {
+            let size = height.computed_size();
+            let new_size = size.saturating_sub(self.extra_height());
+            height = height.set_computed_size(new_size);
         }
 
-        if self.size.height.is_percent() {
-            let size = self.size.height.computed_size();
-            let new_size = size.saturating_sub(self.extra_height());
-            self.size.height = self.size.height.set_computed_size(new_size);
+        // Clamp size
+        self.size = Size::new(width, height).clamp_computed_size(self.min_size, self.max_size);
+
+        // Recalculate wrapped text height, if height is auto
+        if self.size.height.is_auto() {
+            let self_width = self.size.width.computed_size();
+            let text_line_count: u16 = text.lines().count().try_into().unwrap();
+            let text_height = if self_width == 0 {
+                // Simulate split by word
+                // TODO: limit text size to u16
+                // TODO: implement a Text struct
+                text.split_whitespace().count().try_into().unwrap()
+            } else {
+                // Simulate split by char (can't do by word here)
+                // Extract the new wrapped height size from text
+                // TODO: limit text size to u16
+                text.lines().fold(0, |acc, line| {
+                    let len: u16 = line.chars().count().try_into().unwrap();
+                    acc + len.div_ceil(self_width)
+                })
+            };
+
+            // Add text height wrap difference to the current size
+            let height = self.size.height.computed_size();
+            self.size.height = self
+                .size
+                .height
+                .set_computed_size(height + text_height - text_line_count);
+
+            // Clamp size
+            self.size.height = self
+                .size
+                .height
+                .clamp_computed_size(self.min_size.height, self.max_size.height);
+
+            let text_width = text
+                .lines()
+                .map(|line| line.chars().count())
+                .max()
+                .unwrap_or(0)
+                .min(self_width as usize)
+                .try_into()
+                .unwrap();
+            return (text_width, text_height);
         }
+
+        return (0, 0);
+    }
+
+    /// Calculates auto (for text) and intrinsic sizes
+    pub fn compute_intrinsic_size(&mut self, text: &str) {
+        // Default auto parent since we only care about intrinsic size
+        let parent_size = Size::default();
+
+        // Calc min max
+        self.min_size = self
+            .min_size
+            .compute_size(parent_size, Self::DEFAULT_MIN_SIZE);
+        self.max_size = self
+            .max_size
+            .compute_size(parent_size, Self::DEFAULT_MAX_SIZE);
+
+        // Calc size
+        let Size {
+            mut width,
+            mut height,
+        } = self.size.compute_size(parent_size, (0, 0));
+
+        // Extract size from text as a block
+        // TODO: limit text size to u16
+        let (text_height, text_width) = text.lines().fold((0, 0), |(count, max), line| {
+            let len = line.chars().count();
+            (count + 1, max.max(len))
+        });
+
+        // Set to intrinsic text size if auto size
+        if width.is_auto() {
+            width = width.set_computed_size(text_width.try_into().unwrap());
+        }
+        if height.is_auto() {
+            height = height.set_computed_size(text_height);
+        }
+
+        // Set size
+        self.size = Size::new(width, height);
     }
 
     /// Returns the extra width (horizontal padding and borders)
@@ -108,13 +207,29 @@ impl Style {
     pub fn total_height(&self) -> u16 {
         self.clamped_height().saturating_add(self.extra_height())
     }
+
+    /// Total computed unclamped width
+    pub fn total_width_unclamped(&self) -> u16 {
+        self.size
+            .width
+            .computed_size()
+            .saturating_add(self.extra_width())
+    }
+
+    /// Total computed unclamped height
+    pub fn total_height_unclamped(&self) -> u16 {
+        self.size
+            .height
+            .computed_size()
+            .saturating_add(self.extra_height())
+    }
 }
 
 impl Size {
-    /// Computes the size based on parent's size, if self is auto, default is used.
-    pub fn compute_size(self, parent: Self, default: u16) -> Self {
-        let width = self.width.compute_size(parent.width, default);
-        let height = self.height.compute_size(parent.height, default);
+    /// Computes the size based on parent's size, if self is auto, default (width, height) is used.
+    pub fn compute_size(self, parent: Self, default: (u16, u16)) -> Self {
+        let width = self.width.compute_size(parent.width, default.0);
+        let height = self.height.compute_size(parent.height, default.1);
         Self::new(width, height)
     }
 
@@ -131,15 +246,11 @@ impl SizeValue {
     pub fn compute_size(self, parent: Self, default: u16) -> Self {
         match self {
             Self::Auto(_) => self.set_computed_size(default),
-            Self::Cells(..) => self,
+            Self::Cells(cells, _) => self.set_computed_size(cells),
             Self::Percent(p, _) => {
-                if parent.is_auto() {
-                    self.set_computed_size(0)
-                } else {
-                    let size = parent.computed_size();
-                    let size = (size as f32 * p as f32 / 100.0).floor() as u16;
-                    self.set_computed_size(size)
-                }
+                let size = parent.computed_size();
+                let size = (size as f32 * p as f32 / 100.0).floor() as u16;
+                self.set_computed_size(size)
             }
         }
     }

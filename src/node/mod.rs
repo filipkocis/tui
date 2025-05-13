@@ -96,11 +96,140 @@ impl Node {
         size
     }
 
-    /// Computes the node's canvas. This should be called before [rendering](Self::render_to)
+    /// Computes the node's size and canvas. This should be called before
+    /// [rendering](Self::render_to)
+    pub fn compute(&mut self, parent_position: Offset, parent_available_size: Size) {
+        self.calculate_auto_intrinsic_size();
+        self.calculate_percentage_size(parent_available_size);
+        self.calculate_canvas(parent_position);
+    }
+
+    /// Calculates the percentage size of the node, applies clamping, calculates text wrapping
+    /// height change (for auto), and resizes auto-size with text and **non-percentage** children (percentages are
+    /// not taken into account in this step of resizing).
+    ///
+    /// This is the second step of size calculation process. Percentage and clamping calculation
+    /// have a top-down direction. Auto-size resizing has a bottom-up direcion.
+    ///
+    /// # Note
+    /// Clamps the size
+    pub fn calculate_percentage_size(&mut self, parent_available_size: Size) {
+        // Calculate the size of this node
+        let (text_width, text_height) = self
+            .style
+            .compute_percentage_size(parent_available_size, &self.content);
+
+        // Calculate the available content size of tis node
+        let available_content_size = self.available_content_size();
+
+        // Either max_size or total_size depending on flex direction
+        // let mut width = self.style.size.width.computed_size();
+        // let mut height = self.style.size.height.computed_size();
+        let mut width = text_width;
+        let mut height = 0;
+
+        let mut had_first_child = false;
+        for child in self.children.iter() {
+            let mut child = child.borrow_mut();
+            child.calculate_percentage_size(available_content_size);
+
+            // Skip absolute children
+            if child.style.offset.is_absolute() {
+                continue;
+            }
+
+            // Get total clamped child size, if not a percentage
+            let child_width =
+                child.style.total_width() * !self.style.size.width.is_percent() as u16;
+            let child_height =
+                child.style.total_height() * !self.style.size.height.is_percent() as u16;
+
+            // Accumulate node's size with children of non-percentage size
+            if self.style.flex_row {
+                width += child_width + self.style.gap.0 * had_first_child as u16;
+                height = height.max(child_height);
+            } else {
+                height += child_height + self.style.gap.1 * had_first_child as u16;
+                width = width.max(child_width);
+            }
+
+            had_first_child = true;
+        }
+
+        // Add text height as flex-col, since text isn't part of the flexbox
+        let has_text = text_height > 0;
+        height += text_height + self.style.gap.1 * had_first_child as u16 * has_text as u16;
+
+        // Apply the resized accumulated size if auto
+        if self.style.size.width.is_auto() {
+            self.style.size.width = self.style.size.width.set_computed_size(width);
+        }
+        if self.style.size.height.is_auto() {
+            self.style.size.height = self.style.size.height.set_computed_size(height);
+        }
+
+        // Clamp the size
+        self.style.size = self
+            .style
+            .size
+            .clamp_computed_size(self.style.min_size, self.style.max_size);
+    }
+
+    /// Calculates the auto size and intrinsic size of the node. It's the first step of size
+    /// calculation process. Auto is calculated bottom-up, intrinsic is calculated top-down.
+    ///
+    /// # Note
+    /// Does not clamp the size
+    pub fn calculate_auto_intrinsic_size(&mut self) {
+        // Compute intrinsic size and text with auto size
+        self.style.compute_intrinsic_size(&self.content);
+
+        // Either max_size or total_size depending on flex direction
+        let mut width = self.style.size.width.computed_size();
+        let mut height = self.style.size.height.computed_size();
+
+        let mut had_first_child = false;
+        for child in self.children.iter() {
+            let mut child = child.borrow_mut();
+            child.calculate_auto_intrinsic_size();
+
+            // Skip absolute children
+            if child.style.offset.is_absolute() {
+                continue;
+            }
+
+            // Get total unclamped child size
+            let child_width = child.style.total_width_unclamped();
+            let child_height = child.style.total_height_unclamped();
+
+            // Accumulate node's size with children
+            if self.style.flex_row {
+                width += child_width + self.style.gap.0 * had_first_child as u16;
+                height = height.max(child_height);
+            } else {
+                height += child_height + self.style.gap.1 * had_first_child as u16;
+                width = width.max(child_width);
+            }
+
+            had_first_child = true;
+        }
+
+        // Apply the accumulated size if auto
+        if self.style.size.width.is_auto() {
+            self.style.size.width = self.style.size.width.set_computed_size(width);
+        }
+        if self.style.size.height.is_auto() {
+            self.style.size.height = self.style.size.height.set_computed_size(height);
+        }
+    }
+
+    /// Computes the node's canvas, combines them in a bottom-up direction. Should be called after
+    /// finishing the size calculation process.
     ///
     /// - `parent_position` is the start of this node's canvas.
     /// - `parent_size` is the available parent's content size for this child to grow into.
-    pub fn calculate_canvas(&mut self, parent_position: Offset, parent_size: Size) {
+    pub fn calculate_canvas(&mut self, parent_position: Offset) {
+        // Apply z-index sort
         self.z_sort_children();
 
         let offset_position = parent_position.add(self.style.offset);
@@ -109,31 +238,41 @@ impl Node {
             self.style.padding.top as i16 + self.style.border.0 as i16,
         ));
 
-        self.style.compute_size_td(parent_size);
-
         let mut canvas = Canvas {
             position: offset_position.tuple(),
             buffer: vec![],
         };
 
-        let available_content_size = self.available_content_size();
-        let mut extra_offset = (0, 0);
+        // Add text (before children)
+        canvas.add_text(&self.content, self.style.size);
+
+        // Start children after text (always flex-col)
+        let y_after_text = {
+            let height = canvas.height() as i16;
+            let gap_row = self.style.gap.1 as i16 * (height > 0) as i16;
+            height + gap_row
+        };
+
+        let mut extra_offset = (0, y_after_text);
         let mut include_gap = false;
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
             let child_start_position = content_position.add_tuple(extra_offset);
-            child.calculate_canvas(child_start_position, available_content_size);
+            child.calculate_canvas(child_start_position);
 
+            // Skip absolute children
             if child.style.offset.is_absolute() {
                 continue;
             }
 
+            // Increment the canvas offset for the next child
             if self.style.flex_row {
                 extra_offset.0 += child.canvas.width() as i16 + self.style.gap.0 as i16;
             } else {
                 extra_offset.1 += child.canvas.height() as i16 + self.style.gap.1 as i16;
             }
 
+            // Add the child canvas to this node's canvas
             canvas.extend_child(
                 &child.canvas,
                 &self.style,
@@ -141,11 +280,14 @@ impl Node {
                 self.style.flex_row && i == 0,
             );
 
+            // Include gap after first child is seen
             include_gap = true;
         }
-        canvas.add_text(&self.content, self.style.size);
+
+        // Normalize the canvas to a block based on the style
         canvas.normalize(&self.style);
 
+        // Add block styling
         canvas.add_padding(self.style.padding);
         canvas.add_fg(self.style.fg);
         canvas.add_bg(self.style.bg);
