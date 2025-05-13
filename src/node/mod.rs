@@ -1,6 +1,6 @@
 mod handle;
 
-pub use handle::NodeHandle;
+pub use handle::{NodeHandle, WeakNodeHandle};
 
 use std::{cell::RefCell, rc::Rc};
 
@@ -15,7 +15,7 @@ pub struct Node {
     pub style: Style,
     pub content: String,
 
-    parent: Option<NodeHandle>,
+    parent: Option<WeakNodeHandle>,
     children: Vec<NodeHandle>,
 
     /// Event handlers registered on this node. It's not public since eventhandlers take `self` as
@@ -359,7 +359,9 @@ impl Node {
 
         if !handled {
             if let Some(ref parent) = self.parent {
-                parent.borrow_mut().bubble_event(event);
+                parent.upgrade().map(|parent| {
+                    parent.borrow_mut().bubble_event(event);
+                });
             }
         }
     }

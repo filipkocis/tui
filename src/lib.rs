@@ -12,7 +12,7 @@ pub use char::{Char, Code};
 pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use line::Line;
-pub use node::{Node, NodeHandle};
+pub use node::{Node, NodeHandle, WeakNodeHandle};
 pub use style::{Offset, Padding, Size, SizeValue, Style};
 pub use viewport::Viewport;
 
