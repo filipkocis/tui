@@ -2,6 +2,7 @@ mod canvas;
 mod char;
 mod elements;
 mod handler;
+mod hitmap;
 mod line;
 mod node;
 mod style;
@@ -11,8 +12,9 @@ pub use canvas::Canvas;
 pub use char::{Char, Code};
 pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
+pub use hitmap::HitMap;
 pub use line::Line;
-pub use node::{Node, NodeHandle, WeakNodeHandle};
+pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle};
 pub use style::{Offset, Padding, Size, SizeValue, Style};
 pub use viewport::Viewport;
 
@@ -30,6 +32,7 @@ pub struct App {
     alternate: bool,
     root: NodeHandle,
 
+    hitmap: HitMap,
     canvas: Canvas,
     viewport: Viewport,
 }
@@ -40,6 +43,7 @@ impl App {
             raw: true,
             alternate: true,
             root,
+            hitmap: HitMap::default(),
             canvas: Canvas::default(),
             viewport: Viewport::new(),
         }
@@ -66,6 +70,7 @@ impl App {
         self.viewport.max = (width, height);
         self.viewport.screen = (width, height);
         self.canvas = Canvas::new(width as usize, height as usize);
+        self.hitmap.resize(width, height);
 
         self.root
             .borrow_mut()
@@ -76,7 +81,7 @@ impl App {
     pub fn render(&mut self) -> io::Result<()> {
         self.root
             .borrow()
-            .render_to(self.viewport, &mut self.canvas);
+            .render_to(self.viewport, &mut self.canvas, &mut self.hitmap);
         self.canvas.render()?;
         Ok(())
     }

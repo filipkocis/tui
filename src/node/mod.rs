@@ -6,7 +6,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crossterm::event::Event;
 
-use crate::{Canvas, EventHandlers, IntoEventHandler, Offset, Size, Style, Viewport};
+use crate::{Canvas, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Unique node id
@@ -25,6 +25,12 @@ impl NodeId {
     #[inline]
     pub fn new() -> Self {
         Self::generate_id()
+    }
+
+    /// Creates a node id from a u64
+    #[inline]
+    pub(crate) fn new_from(id: u64) -> Self {
+        Self(id)
     }
 
     /// Returns the id as a u64
@@ -338,7 +344,7 @@ impl Node {
 
     /// Render the node and its children to `canvas` within the given `viewport`. Node's canvas has to be
     /// computed before calling this function.
-    pub fn render_to(&self, mut viewport: Viewport, canvas: &mut Canvas) {
+    pub fn render_to(&self, mut viewport: Viewport, canvas: &mut Canvas, hitmap: &mut HitMap) {
         viewport.min = (
             self.canvas.position.0.max(0) as u16,
             self.canvas.position.1.max(0) as u16,
@@ -357,6 +363,7 @@ impl Node {
 
         viewport.max = (max.0.min(abs_max.0), max.1.min(abs_max.1));
 
+        hitmap.add_target_area(self.id(), &viewport);
         self.canvas.render_to(&viewport, canvas);
 
         let overflow = (
@@ -373,7 +380,7 @@ impl Node {
 
         for child in &self.children {
             let child = child.borrow();
-            child.render_to(viewport, canvas);
+            child.render_to(viewport, canvas, hitmap);
         }
     }
 
