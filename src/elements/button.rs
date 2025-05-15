@@ -29,15 +29,13 @@ pub fn on_click_handler(
         let x = mouse_event.column as i16;
         let y = mouse_event.row as i16;
 
-        if node.hit_test(x, y) {
-            let click_event = MouseClickEvent {
-                button,
-                relative: node.relative_position(x, y),
-                modifiers: mouse_event.modifiers,
-            };
+        let click_event = MouseClickEvent {
+            button,
+            relative: node.relative_position(x, y),
+            modifiers: mouse_event.modifiers,
+        };
 
-            return on_click(click_event, node);
-        }
+        on_click(click_event, node)
     }
 }
 
