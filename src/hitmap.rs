@@ -16,6 +16,11 @@ impl HitMap {
         Self { map }
     }
 
+    /// Returns the id of the cell at `x, y`
+    pub fn get(&self, x: u16, y: u16) -> Option<NodeId> {
+        self.map.get(y as usize).and_then(|row| row.get(x as usize).copied())
+    }
+
     /// Resizes the hitmap to the new size, resets all cells with `NodeId(0)`
     pub fn resize(&mut self, width: u16, height: u16) {
         let width = width as usize;
