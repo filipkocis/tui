@@ -17,26 +17,27 @@ pub fn on_click_handler(
     mut on_click: impl FnMut(MouseClickEvent, &mut Node) -> bool + 'static,
 ) -> impl IntoEventHandler {
     move |event: &Event, node: &mut Node| {
-        if let Event::Mouse(mouse_event) = event {
-            let button = match mouse_event.kind {
-                MouseEventKind::Down(button) => button,
-                _ => return false,
+        let Some(mouse_event) = event.as_mouse_event() else {
+            return false;
+        };
+
+        let button = match mouse_event.kind {
+            MouseEventKind::Down(button) => button,
+            _ => return false,
+        };
+
+        let x = mouse_event.column as i16;
+        let y = mouse_event.row as i16;
+
+        if node.hit_test(x, y) {
+            let click_event = MouseClickEvent {
+                button,
+                relative: node.relative_position(x, y),
+                modifiers: mouse_event.modifiers,
             };
 
-            let x = mouse_event.column as i16;
-            let y = mouse_event.row as i16;
-
-            if node.hit_test(x, y) {
-                let click_event = MouseClickEvent {
-                    button,
-                    relative: node.relative_position(x, y),
-                    modifiers: mouse_event.modifiers,
-                };
-
-                return on_click(click_event, node);
-            }
+            return on_click(click_event, node);
         }
-        false
     }
 }
 
