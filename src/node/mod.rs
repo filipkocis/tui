@@ -386,7 +386,10 @@ impl Node {
 
     /// Handle a single event for this node. returns tru wheter it should stop propagating
     pub fn handle_event(&mut self, event: &Event, is_capturing: bool) -> bool {
-        self.handlers.clone().borrow_mut().handle(self, event, is_capturing)
+        self.handlers
+            .clone()
+            .borrow_mut()
+            .handle(self, event, is_capturing)
     }
 
     /// Propagate event down to children.
@@ -423,5 +426,22 @@ impl Node {
         self.handlers
             .borrow_mut()
             .add_handler(handler, is_capturing);
+    }
+
+    /// Builds a `path` from target to root node, returning true if the target was found.
+    /// TODO: remove this, this is a temporary solution
+    pub fn build_path_to_node(&self, id: NodeId, path: &mut Vec<Rc<RefCell<Node>>>) -> bool {
+        if self.id() == id {
+            return true;
+        }
+
+        for child in &self.children {
+            if child.borrow().build_path_to_node(id, path) {
+                path.push(child.0.clone());
+                return true;
+            }
+        }
+
+        false
     }
 }
