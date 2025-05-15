@@ -18,11 +18,13 @@ pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle};
 pub use style::{Offset, Padding, Size, SizeValue, Style};
 pub use viewport::Viewport;
 
-use std::{io, time::Duration};
+use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
 use crossterm::{
     self,
-    event::{self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture},
+    event::{
+        self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture, Event,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -82,6 +84,7 @@ impl App {
         self.root
             .borrow()
             .render_to(self.viewport, &mut self.canvas, &mut self.hitmap);
+        self.canvas.prune_redundant_codes();
         self.canvas.render()?;
         Ok(())
     }
