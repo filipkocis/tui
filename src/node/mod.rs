@@ -384,6 +384,11 @@ impl Node {
         }
     }
 
+    /// Handle a single event for this node. returns tru wheter it should stop propagating
+    pub fn handle_event(&mut self, event: &Event, is_capturing: bool) -> bool {
+        self.handlers.clone().borrow_mut().handle(self, event, is_capturing)
+    }
+
     /// Propagate event down to children.
     pub fn propagate_event(&mut self, event: &Event) {
         let handled = self.handlers.clone().borrow_mut().handle(self, event, true);
