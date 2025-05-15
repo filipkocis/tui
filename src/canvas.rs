@@ -342,4 +342,12 @@ impl Canvas {
 
         self.buffer[y as usize].paste_on_top(&line, x.max(0) as usize);
     }
+
+    /// Prune redundant codes from the canvas, removing any codes that are not needed and have no
+    /// effect, like duplicates.
+    pub fn prune_redundant_codes(&mut self) {
+        for line in &mut self.buffer {
+            line.prune_redundant_codes();
+        }
+    }
 }

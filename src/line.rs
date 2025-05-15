@@ -169,6 +169,85 @@ impl Line {
         self.chars = new_line.chars;
     }
 
+    /// Prune redundant codes in the line, removing any codes with no effect, such as duplicates.
+    pub fn prune_redundant_codes(&mut self) {
+        // Active codes set previously in the line
+        let mut set_attrs: Option<usize> = None;
+        let mut set_fg = None;
+        let mut set_bg = None;
+
+        // Codes currently being processed before the next char
+        let mut cur_attrs: Option<usize> = None;
+        let mut cur_fg = None;
+        let mut cur_bg = None;
+
+        let mut chars = Vec::new();
+
+        for c in self.chars.drain(..) {
+            match c {
+                // Set current code, but only if its not a first code == reset code
+                Char::Code(code) => match code {
+                    Code::Foreground(fg) => {
+                        if set_fg.is_none() && fg == Color::Reset {
+                            cur_fg = None;
+                            continue;
+                        }
+                        cur_fg = Some(fg);
+                    }
+                    Code::Background(bg) => {
+                        if set_bg.is_none() && bg == Color::Reset {
+                            cur_bg = None;
+                            continue;
+                        }
+                        cur_bg = Some(bg);
+                    }
+                    Code::Attribute(attr) => todo!("attr"),
+                },
+                // Consume current codes and apply them if they are different from set codes
+                Char::Char(char) => {
+                    if let Some(fg) = cur_fg.take() {
+                        if set_fg != Some(fg) {
+                            chars.push(Char::Code(Code::Foreground(fg)));
+                            set_fg = Some(fg);
+                        }
+                    }
+
+                    if let Some(bg) = cur_bg.take() {
+                        if set_bg != Some(bg) {
+                            chars.push(Char::Code(Code::Background(bg)));
+                            set_bg = Some(bg);
+                        }
+                    }
+
+                    if let Some(attrs) = cur_attrs.take() {
+                        todo!("attrs")
+                    }
+
+                    chars.push(Char::Char(char));
+                }
+            }
+        }
+
+        // Add final codes, only if they are reset codes and not first codes
+        if chars.len() != 0 {
+            let reset = Some(Color::Reset);
+            if reset == cur_fg.take() && set_fg != reset && set_fg.is_some() {
+                chars.push(Char::Code(Code::Foreground(Color::Reset)));
+            }
+
+            if reset == cur_bg.take() && set_bg != reset && set_bg.is_some() {
+                chars.push(Char::Code(Code::Background(Color::Reset)));
+            }
+
+            if let Some(attrs) = cur_attrs.take() {
+                todo!("attrs")
+            }
+        }
+
+        self.chars = chars;
+        debug_assert_eq!(self.len() == 0, self.chars.len() == 0);
+    }
+
     /// Resize the line to fit exactly `len` in chars
     pub fn resize_to_fit(&mut self, len: usize) {
         let mut diff = len as isize - self.len() as isize;
