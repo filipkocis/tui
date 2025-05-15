@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crossterm::style::{Attribute, Color, SetBackgroundColor, SetForegroundColor};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Char {
     Char(char),
     Code(Code),
@@ -29,7 +29,7 @@ impl Char {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Copy)]
 pub enum Code {
     Attribute(Attribute),
     Background(Color),
