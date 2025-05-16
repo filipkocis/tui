@@ -304,8 +304,15 @@ impl Node {
         let mut include_gap = false;
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
-            let child_start_position = content_position.add_tuple(extra_offset);
-            child.calculate_canvas(child_start_position);
+
+            if child.style.offset.is_absolutely_relative() {
+                // Use parent's 0,0 for absolutely relative children
+                child.calculate_canvas(content_position);
+            } else {
+                // Accumulate offset for relative children
+                let child_start_position = content_position.add_tuple(extra_offset);
+                child.calculate_canvas(child_start_position);
+            }
 
             // Skip absolute children
             if child.style.offset.is_absolute() {

@@ -36,6 +36,16 @@ impl Offset {
         }
     }
 
+    /// True if self is the `AbsolutelyRelative` variant
+    #[inline(always)]
+    pub fn is_absolutely_relative(&self) -> bool {
+        match self {
+            Self::AbsolutelyRelative(..) => true,
+            _ => false,
+        }
+    }
+
+    /// True if self is the `Translate` variant
     #[inline(always)]
     pub fn is_translate(&self) -> bool {
         matches!(self, Self::Translate(..))
