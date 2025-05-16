@@ -5,7 +5,7 @@ use std::{
 
 use super::Node;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Handle to a non-owning node, used for parent references
 pub struct WeakNodeHandle(pub(crate) Weak<RefCell<Node>>);
 
@@ -30,6 +30,11 @@ impl NodeHandle {
     /// Constructs a new handle from a node
     pub fn new(node: Node) -> Self {
         Self(Rc::new(RefCell::new(node)))
+    }
+
+    /// Constructs a weak handle. Use with caution.
+    pub fn weak(&self) -> WeakNodeHandle {
+        WeakNodeHandle(Rc::downgrade(self.inner()))
     }
 
     #[inline(always)]

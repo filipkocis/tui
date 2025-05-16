@@ -55,7 +55,8 @@ pub struct Node {
     pub style: Style,
     pub content: String,
 
-    parent: Option<WeakNodeHandle>,
+    /// Weak ref to parent. Use with caution to prevent deadlocks or memory leaks
+    pub(crate) parent: Option<WeakNodeHandle>,
     children: Vec<NodeHandle>,
 
     /// Event handlers registered on this node. It's not public since eventhandlers take `self` as
