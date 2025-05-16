@@ -1,6 +1,10 @@
 #[derive(Debug, Clone, Copy)]
 pub enum Offset {
+    /// Absolute offset in screen space
     Absolute(i16, i16),
+    /// Relative offset from parent, node is positioned absolutely.
+    AbsolutelyRelative(i16, i16),
+    /// Relative offset from parent, node is positioned inside the parent
     Translate(i16, i16),
 }
 
@@ -9,6 +13,7 @@ impl Offset {
     pub fn x(&self) -> i16 {
         match self {
             Self::Absolute(x, _) => *x,
+            Self::AbsolutelyRelative(x, _) => *x,
             Self::Translate(x, _) => *x,
         }
     }
@@ -17,13 +22,18 @@ impl Offset {
     pub fn y(&self) -> i16 {
         match self {
             Self::Absolute(_, y) => *y,
+            Self::AbsolutelyRelative(_, y) => *y,
             Self::Translate(_, y) => *y,
         }
     }
 
+    /// Returns wheter the node should be absolutely positioned
     #[inline(always)]
     pub fn is_absolute(&self) -> bool {
-        matches!(self, Self::Absolute(..))
+        match self {
+            Self::Absolute(..) | Self::AbsolutelyRelative(..) => true,
+            _ => false,
+        }
     }
 
     #[inline(always)]
@@ -35,16 +45,20 @@ impl Offset {
     pub fn tuple(self) -> (i16, i16) {
         match self {
             Self::Absolute(x, y) => (x, y),
+            Self::AbsolutelyRelative(x, y) => (x, y),
             Self::Translate(x, y) => (x, y),
         }
     }
 
     #[inline(always)]
     pub fn add(self, child: Self) -> Self {
-        match (self, child) {
-            (Self::Translate(x1, y1), Self::Translate(x2, y2)) => Self::Translate(x1 + x2, y1 + y2),
-            (Self::Absolute(x1, y1), Self::Translate(x2, y2)) => Self::Translate(x1 + x2, y1 + y2),
-            (_, Self::Absolute(..)) => child,
+        match child {
+            Self::Translate(x, y) | Self::AbsolutelyRelative(x, y) =>
+                Self::Translate(
+                    self.x() + x,
+                    self.y() + y,
+                ),
+            Self::Absolute(..) => child
         }
     }
 
