@@ -53,12 +53,10 @@ impl Offset {
     #[inline(always)]
     pub fn add(self, child: Self) -> Self {
         match child {
-            Self::Translate(x, y) | Self::AbsolutelyRelative(x, y) =>
-                Self::Translate(
-                    self.x() + x,
-                    self.y() + y,
-                ),
-            Self::Absolute(..) => child
+            Self::Translate(x, y) | Self::AbsolutelyRelative(x, y) => {
+                Self::Translate(self.x() + x, self.y() + y)
+            }
+            Self::Absolute(..) => child,
         }
     }
 
