@@ -10,8 +10,15 @@ pub struct Line {
 }
 
 impl Line {
+    /// Returns a new line with `size` empty chars
     pub fn new(size: usize) -> Self {
         let chars = vec![Char::Char(' '); size];
+        Self { chars }
+    }
+
+    /// Returns a line built from a string
+    pub fn from_string(string: &str) -> Self {
+        let chars = string.chars().map(Char::Char).collect();
         Self { chars }
     }
 
