@@ -55,7 +55,7 @@ pub struct Node {
 
     pub class: String,
     pub style: Style,
-    pub content: String,
+    pub content: Text,
 
     /// Weak ref to parent. Use with caution to prevent deadlocks or memory leaks
     pub(crate) parent: Option<WeakNodeHandle>,
@@ -166,7 +166,7 @@ impl Node {
         // Calculate the size of this node
         let (text_width, text_height) = self
             .style
-            .compute_percentage_size(parent_available_size, &self.content);
+            .compute_percentage_size(parent_available_size, &mut self.content);
 
         // Calculate the available content size of tis node
         let available_content_size = self.available_content_size();
