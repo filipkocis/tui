@@ -1,6 +1,6 @@
 use crossterm::style::Color;
 
-use crate::{node::NodeHandle, Node, Offset, Padding, Size, SizeValue};
+use crate::{node::NodeHandle, text::Text, Node, Offset, Padding, Size, SizeValue};
 
 use super::{button::MouseClickHandler, Button};
 
@@ -8,23 +8,23 @@ pub struct Dialog;
 
 impl Dialog {
     /// Returns a title text node
-    fn title(title: String) -> Node {
+    fn title(title: &str) -> Node {
         let mut node = Node::default();
-        node.content = title;
+        node.content = Text::plain(title);
         node.style.bold = true;
         node
     }
 
     /// Returns a message text node
-    fn message(message: String) -> Node {
+    fn message(message: &str) -> Node {
         let mut node = Node::default();
-        node.content = message;
+        node.content = Text::plain(message);
         node.style.max_size = Size::new(SizeValue::percent(100), SizeValue::auto());
         node
     }
 
     /// Returns a button node
-    fn button(label: String, on_click: Option<MouseClickHandler>, bg: Option<Color>) -> Node {
+    fn button(label: &str, on_click: Option<MouseClickHandler>, bg: Option<Color>) -> Node {
         let mut node = Button::new(label, on_click);
         node.style.bg = bg;
         node.style.padding = Padding::new(0, 2);
@@ -66,12 +66,12 @@ impl Dialog {
 
     /// Constructs a new dialog [`Node`](Node) with a title, message, and two buttons.
     pub fn dialog(
-        title: String,
-        message: String,
+        title: &str,
+        message: &str,
         on_action: Option<MouseClickHandler>,
-        action_label: Option<String>,
+        action_label: Option<&str>,
         on_cancel: Option<MouseClickHandler>,
-        cancel_label: Option<String>,
+        cancel_label: Option<&str>,
     ) -> NodeHandle {
         let node = Self::container(0);
         if title.len() > 0 {
@@ -85,7 +85,7 @@ impl Dialog {
 
         let buttons = Self::buttons_container();
         let action = Self::button(
-            action_label.unwrap_or_else(|| "OK".to_string()),
+            action_label.unwrap_or("OK"),
             on_action,
             Some(Color::Rgb {
                 r: 255,
@@ -94,7 +94,7 @@ impl Dialog {
             }),
         );
         let cancel = Self::button(
-            cancel_label.unwrap_or_else(|| "Cancel".to_string()),
+            cancel_label.unwrap_or("Cancel"),
             on_cancel,
             Some(Color::Rgb {
                 r: 170,
@@ -111,10 +111,10 @@ impl Dialog {
 
     /// Constructs a new alert [`Node`](Node) with a title, message, and one button.
     pub fn alert(
-        title: String,
-        message: String,
+        title: &str,
+        message: &str,
         on_action: Option<MouseClickHandler>,
-        action_label: Option<String>,
+        action_label: Option<&str>,
     ) -> NodeHandle {
         let node = Self::container(30);
         if title.len() > 0 {
@@ -128,7 +128,7 @@ impl Dialog {
 
         let buttons = Self::buttons_container();
         let action = Self::button(
-            action_label.unwrap_or_else(|| "OK".to_string()),
+            action_label.unwrap_or("OK"),
             on_action,
             Some(Color::Rgb {
                 r: 138,
