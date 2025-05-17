@@ -4,7 +4,7 @@ use crossterm::style::{Attribute, Color};
 
 use crate::{Char, Code};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Line {
     pub chars: Vec<Char>,
 }
