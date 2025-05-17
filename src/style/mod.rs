@@ -131,7 +131,7 @@ impl Style {
     }
 
     /// Calculates auto (for text) and intrinsic sizes
-    pub fn compute_intrinsic_size(&mut self, text: &str) {
+    pub fn compute_intrinsic_size(&mut self, text: &Text) {
         // Default auto parent since we only care about intrinsic size
         let parent_size = Size::default();
 
@@ -149,16 +149,12 @@ impl Style {
             mut height,
         } = self.size.compute_size(parent_size, (0, 0));
 
-        // Extract size from text as a block
-        // TODO: limit text size to u16
-        let (text_height, text_width) = text.lines().fold((0, 0), |(count, max), line| {
-            let len = line.chars().count();
-            (count + 1, max.max(len))
-        });
+        // Get text dimensions
+        let (text_width, text_height) = text.get_processed_size();
 
         // Set to intrinsic text size if auto size
         if width.is_auto() {
-            width = width.set_computed_size(text_width.try_into().unwrap());
+            width = width.set_computed_size(text_width);
         }
         if height.is_auto() {
             height = height.set_computed_size(text_height);
