@@ -360,9 +360,11 @@ impl Node {
             self.canvas.position.1.max(0) as u16,
         );
 
+        let total_width = self.style.total_width();
+        let total_height = self.style.total_height();
         let max = (
-            (self.canvas.position.0 + self.style.total_width() as i16).max(0) as u16,
-            (self.canvas.position.1 + self.style.total_height() as i16).max(0) as u16,
+            (self.canvas.position.0 + total_width as i16).max(0) as u16,
+            (self.canvas.position.1 + total_height as i16).max(0) as u16,
         );
 
         let abs_max = if self.style.offset.is_absolute() {
@@ -376,9 +378,23 @@ impl Node {
         hitmap.add_target_area(self.id(), &viewport);
         self.canvas.render_to(&viewport, canvas);
 
-        let overflow = (
+        let screen_overflow = (
             max.0.saturating_sub(viewport.screen.0),
             max.1.saturating_sub(viewport.screen.1),
+        );
+
+        let viewport_span = (
+            viewport.max.0.saturating_sub(viewport.min.0),
+            viewport.max.1.saturating_sub(viewport.min.1),
+        );
+        let parent_overflow = (
+            total_width.saturating_sub(viewport_span.0),
+            total_height.saturating_sub(viewport_span.1),
+        );
+
+        let overflow = (
+            screen_overflow.0.max(parent_overflow.0),
+            screen_overflow.1.max(parent_overflow.1),
         );
 
         viewport.max.0 = viewport.max.0.saturating_sub(

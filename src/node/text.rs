@@ -60,6 +60,9 @@ pub struct Text {
     pub input: TextInput,
     /// Color and attribute commands
     pub style: Vec<CodeSpan>,
+    /// Text wrapping style
+    pub wrap: TextWrap,
+
     /// Text with applied styles and sanitization
     pub processed: Vec<Line>,
     /// Visible and wrapped text
@@ -69,9 +72,6 @@ pub struct Text {
     pub original_size: (usize, usize),
     /// Size of the processed text
     pub processed_size: (usize, usize),
-
-    /// Text wrapping style
-    pub wrap: TextWrap,
 }
 
 impl Text {
