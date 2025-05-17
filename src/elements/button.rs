@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyModifiers, MouseButton, MouseEventKind};
 
-use crate::{IntoEventHandler, Node, Size};
+use crate::{text::Text, IntoEventHandler, Node, Size};
 
 pub struct Button;
 
@@ -41,12 +41,11 @@ pub fn on_click_handler(
 
 impl Button {
     /// Constructs a new buttom [`Node`](Node)
-    pub fn new(label: String, on_click: Option<MouseClickHandler>) -> Node {
+    pub fn new(label: &str, on_click: Option<MouseClickHandler>) -> Node {
         let mut node = Node::default();
-        let len = label.len() as u16;
-
-        node.content = label;
-        node.style.size = Size::from_cells(len, 1);
+        node.content = Text::plain(label);
+        let width = node.content.get_processed_size().0;
+        node.style.size = Size::from_cells(width, 1);
         // node.style.grow = true;
 
         // node.add_handler(
