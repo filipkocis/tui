@@ -55,20 +55,20 @@ impl Tabs {
         };
 
         let mut root = Node::default();
-        root.style.size = Size::new(SizeValue::percent(100), SizeValue::cells(2));
-        root.style.border = (false, true, false, false, Some(Self::COLOR));
+        root.style.size = Size::new(SizeValue::percent(100), SizeValue::cells(3));
         let mut bottom_line = Node::default();
         let mut tabs = Node::default();
 
         let (content, size) = get_content(default);
         bottom_line.content = content;
-        bottom_line.style.offset = Offset::AbsolutelyRelative(0, 2);
+        bottom_line.style.offset = Offset::Translate(0, -1);
         bottom_line.style.size = Size::new(SizeValue::cells(size), SizeValue::cells(1));
         let bottom_line = bottom_line.into_handle();
         let bottom_line_weak = bottom_line.weak();
 
         tabs.style.size = Size::new(SizeValue::percent(100), SizeValue::cells(2));
         tabs.style.flex_row = true;
+        tabs.style.border = (false, true, false, false, Some(Self::COLOR));
         let tabs = tabs.into_handle();
 
         for (i, (label, value)) in values.into_iter().enumerate() {
