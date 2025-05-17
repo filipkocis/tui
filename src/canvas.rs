@@ -6,7 +6,7 @@ use crossterm::{
     QueueableCommand,
 };
 
-use crate::{Char, Code, Line, Padding, Size, Style, Viewport};
+use crate::{text::Text, Char, Code, Line, Padding, Size, Style, Viewport};
 
 #[derive(Debug, Default)]
 pub struct Canvas {
@@ -66,29 +66,21 @@ impl Canvas {
     }
 
     /// Add wrapped text
-    pub fn add_text(&mut self, text: &str, size: Size) {
+    pub fn add_text(&mut self, text: &Text, size: Size) {
         let width = size.width.computed_size() as usize;
         let height = size.height.computed_size() as usize;
 
-        if width == 0 || height == 0 || text.is_empty() {
+        if width == 0 || height == 0 {
             return;
         }
 
-        let lines = text.split('\n');
-
-        for line in lines {
-            let part_count = line.len() / width + if line.len() % width > 0 { 1 } else { 0 };
-            for i in 0..part_count {
-                let start = i * width;
-                let end = ((i + 1) * width).min(line.len());
-                let part = &line[start..end];
-
-                let chars = part.chars().map(Char::Char).collect();
-                let line = Line { chars };
-                if self.buffer.len() < height {
-                    self.buffer.push(line);
-                }
-            }
+        // TODO: Have finalized be just for the viewport
+        for line in &text.finalized {
+            // let line = line.cutout(0, width);
+            let line = line.clone();
+            // if self.buffer.len() < height {
+            self.buffer.push(line);
+            // }
         }
     }
 
@@ -336,5 +328,95 @@ impl Canvas {
         for line in &mut self.buffer {
             line.prune_redundant_codes();
         }
+    }
+}
+
+#[cfg(test)]
+mod canvas {
+    use super::*;
+
+    fn canvas(w: usize, h: usize) -> Canvas {
+        Canvas::new(w, h)
+    }
+
+    fn line_ch<const N: usize>(v: [char; N]) -> Line {
+        Line {
+            chars: v.map(Char::Char).to_vec(),
+        }
+    }
+
+    fn line<const N: usize>(v: [Char; N]) -> Line {
+        Line { chars: v.to_vec() }
+    }
+
+    #[test]
+    fn paste_eq_len_no_col() {
+        let vp = Viewport::new();
+        let mut canvas = canvas(10, 10);
+        let line = line([Char::Char('a'); 10]);
+
+        canvas.paste_on_top(&line, (0, 0), &vp);
+
+        assert_eq!(line.chars.len(), 10);
+        assert_eq!(canvas.width(), 10);
+
+        assert_eq!(canvas.buffer[0].chars, line.chars);
+    }
+
+    #[test]
+    fn paste_eq_start_no_col() {
+        let vp = Viewport::new();
+        let mut canvas = canvas(10, 2);
+        let line = line([Char::Char('a'); 5]);
+
+        canvas.paste_on_top(&line, (0, 0), &vp);
+
+        assert_eq!(line.chars.len(), 5);
+        assert_eq!(canvas.width(), 10);
+
+        assert_eq!(canvas.buffer[0].chars[0..5], line.chars);
+        assert_eq!(canvas.buffer[0].chars[5..], [Char::Char(' '); 5]);
+    }
+
+    #[test]
+    fn paste_middle() {
+        let vp = Viewport::new();
+        let mut canvas = canvas(5, 1);
+        // canvas.buffer[0] = line_ch(['a', 'b', 'c', 'd', 'e']);
+
+        let empty = Char::Char(' ');
+        let letter = Char::Char('T');
+        let mut line = line([letter]);
+
+        let code = Char::Code(Code::Foreground(Color::Red));
+        let ext = Char::Code(Code::Foreground(Color::Reset));
+        line.set(0, code);
+
+        canvas.paste_on_top(&line, (2, 0), &vp);
+
+        assert_eq!(line.chars, [code, letter]);
+        assert_eq!(
+            canvas.buffer[0].chars,
+            [empty, empty, code, letter, ext, empty, empty]
+        );
+
+        canvas.paste_on_top(&line, (2, 0), &vp);
+        assert_eq!(line.chars, [code, letter]);
+        assert_ne!(
+            canvas.buffer[0].chars,
+            [empty, empty, code, letter, ext, empty, empty]
+        );
+        canvas.prune_redundant_codes();
+        assert_eq!(
+            canvas.buffer[0].chars,
+            [empty, empty, code, letter, ext, empty, empty]
+        );
+
+        assert_eq!(line.chars.len(), 2);
+        assert_eq!(line.len(), 1);
+
+        assert_eq!(canvas.width(), 5);
+        assert_eq!(canvas.buffer[0].chars.len(), 5 + 2);
+        assert_eq!(canvas.buffer[0].len(), 5);
     }
 }
