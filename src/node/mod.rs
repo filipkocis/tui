@@ -1,6 +1,8 @@
 mod handle;
+pub mod text;
 
 pub use handle::{NodeHandle, WeakNodeHandle};
+use text::Text;
 
 use std::{cell::RefCell, rc::Rc};
 

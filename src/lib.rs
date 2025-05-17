@@ -14,7 +14,7 @@ pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use hitmap::HitMap;
 pub use line::Line;
-pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle};
+pub use node::{text, Node, NodeHandle, NodeId, WeakNodeHandle};
 pub use style::{Offset, Padding, Size, SizeValue, Style};
 pub use viewport::Viewport;
 
