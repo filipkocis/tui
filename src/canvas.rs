@@ -299,7 +299,7 @@ impl Canvas {
             let x = self.position.0;
             let y = self.position.1 + i as i16;
 
-            if y as u16 >= viewport.max.1 {
+            if y >= 0 && y as u16 >= viewport.max.1 {
                 break; // Skip all lines, we are below the viewport
             }
 
