@@ -1,6 +1,6 @@
-use crossterm::event::{Event, MouseEventKind};
-
 use crate::{Context, Node, SizeValue};
+
+use super::{on_drag_handler, MouseDragEvent, OnDragResult};
 
 pub struct Resizable;
 
@@ -8,59 +8,39 @@ impl Resizable {
     pub fn new(allow_x_resize: bool, allow_y_resize: bool) -> Node {
         let mut node = Node::default();
 
-        let handler = move |ctx: &mut Context, event: &Event, node: &mut Node| {
+        let on_drag = move |ctx: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
+            let mut result = OnDragResult::default();
+
             if !allow_x_resize && !allow_y_resize {
-                return false;
+                return result;
             }
 
-            let Some(mut hold) = ctx.hold else {
-                return false;
-            };
-
-            let Some(mouse_event) = event.as_mouse_event() else {
-                return false;
-            };
-
-            match mouse_event.kind {
-                MouseEventKind::Drag(b) if b.is_left() => {}
-                _ => return false,
-            };
-
-            let start_x = hold.0 as i16;
-            let start_y = hold.1 as i16;
-            let end_x = mouse_event.column;
-            let end_y = mouse_event.row;
-
-            let diff_x = end_x as i16 - start_x;
-            let diff_y = end_y as i16 - start_y;
-
-            let relative = node.relative_position(start_x, start_y);
             let total_width = node.style.total_width();
             let total_height = node.style.total_height();
 
-            let drag_x = relative.0 + 1 == total_width;
-            let drag_y = relative.1 + 1 == total_height;
+            let drag_x = drag_event.relative.0 + 1 == total_width;
+            let drag_y = drag_event.relative.1 + 1 == total_height;
 
             if !drag_x && !drag_y {
-                return false;
+                return result;
             }
 
             if drag_x && allow_x_resize {
-                let new_width = (total_width as i16 + diff_x).max(0) as u16;
+                let new_width = (total_width as i16 + drag_event.delta.0).max(0) as u16;
                 node.style.size.width = SizeValue::cells(new_width);
-                hold.0 = end_x;
+                result.update_hold_x = true;
             }
 
             if drag_y && allow_y_resize {
-                let new_height = (total_height as i16 + diff_y).max(0) as u16;
+                let new_height = (total_height as i16 + drag_event.delta.1).max(0) as u16;
                 node.style.size.height = SizeValue::cells(new_height);
-                hold.1 = end_y;
+                result.update_hold_y = true;
             }
 
-            ctx.hold = Some(hold);
-            true
+            result.stop_propagation = true;
+            result
         };
-        node.add_handler(handler, true);
+        node.add_handler(on_drag_handler(on_drag), true);
 
         node
     }

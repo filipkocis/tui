@@ -74,6 +74,17 @@ impl Offset {
     pub fn add_tuple(self, tuple: (i16, i16)) -> Self {
         self.add(Self::Translate(tuple.0, tuple.1))
     }
+
+    /// Unlike `add`, this method does not change the variant of the offset.
+    #[inline(always)]
+    pub fn add_without_variant_change(self, tuple: (i16, i16)) -> Self {
+        let (nx, ny) = tuple;
+        match self {
+            Self::Translate(x, y) => Self::Translate(x + nx, y + ny),
+            Self::AbsolutelyRelative(x, y) => Self::AbsolutelyRelative(x + nx, y + ny),
+            Self::Absolute(x, y) => Self::Absolute(x + nx, y + ny),
+        }
+    }
 }
 
 impl Default for Offset {
