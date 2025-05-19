@@ -1,8 +1,8 @@
-use crossterm::style::Color;
+use crossterm::{event::KeyModifiers, style::Color};
 
 use crate::{node::NodeHandle, text::Text, Node, Offset, Padding, Size, SizeValue};
 
-use super::{button::MouseClickHandler, Button};
+use super::{button::MouseClickHandler, Button, Draggable};
 
 pub struct Dialog;
 
@@ -44,7 +44,7 @@ impl Dialog {
 
     /// Returns a container node for the dialog
     fn container(y: i16) -> NodeHandle {
-        let mut container = Node::default();
+        let mut container = Draggable::new(None, None, KeyModifiers::CONTROL);
         container.style.offset = Offset::Absolute(0, y);
         container.style.size = Size::new(SizeValue::cells(30), SizeValue::auto());
         container.style.gap = (1, 1);
