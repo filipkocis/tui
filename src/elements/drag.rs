@@ -2,6 +2,7 @@ use crossterm::event::{Event, KeyModifiers, MouseEventKind};
 
 use crate::{Context, IntoEventHandler, Node};
 
+#[derive(Debug, Clone)]
 /// Synthetic event for left-click mouse drag events.
 pub struct MouseDragEvent {
     /// Delta from between `drag startc` and `drag end` positions.

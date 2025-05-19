@@ -1,4 +1,4 @@
-use crate::{Context, Node, SizeValue};
+use crate::{Node, SizeValue};
 
 use super::{on_drag_handler, MouseDragEvent, OnDragResult};
 
@@ -8,7 +8,7 @@ impl Resizable {
     pub fn new(allow_x_resize: bool, allow_y_resize: bool) -> Node {
         let mut node = Node::default();
 
-        let on_drag = move |ctx: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
+        let on_drag = move |_: &mut _, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
 
             if !allow_x_resize && !allow_y_resize {
@@ -21,18 +21,21 @@ impl Resizable {
             let drag_x = drag_event.relative.0 + 1 == total_width;
             let drag_y = drag_event.relative.1 + 1 == total_height;
 
+            // Drag only on the node's edge
             if !drag_x && !drag_y {
                 return result;
             }
 
             if drag_x && allow_x_resize {
-                let new_width = (total_width as i16 + drag_event.delta.0).max(0) as u16;
+                let content_width = node.style.size.width.computed_size();
+                let new_width = (content_width as i16 + drag_event.delta.0).max(0) as u16;
                 node.style.size.width = SizeValue::cells(new_width);
                 result.update_hold_x = true;
             }
 
             if drag_y && allow_y_resize {
-                let new_height = (total_height as i16 + drag_event.delta.1).max(0) as u16;
+                let content_height = node.style.size.height.computed_size();
+                let new_height = (content_height as i16 + drag_event.delta.1).max(0) as u16;
                 node.style.size.height = SizeValue::cells(new_height);
                 result.update_hold_y = true;
             }
