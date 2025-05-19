@@ -181,11 +181,12 @@ impl Canvas {
 
         let lines = self.buffer.len();
         if has_left {
+            let first_char_index = border_color.is_some() as usize; // 0 has color code
             for (i, line) in self.buffer.iter_mut().enumerate() {
                 if i == 0 && has_top {
-                    line.chars.insert(1, top_left); // 0 has color code
+                    line.chars.insert(first_char_index, top_left);
                 } else if i == lines - 1 && has_bottom {
-                    line.chars.insert(1, bottom_left); // 0 has color code
+                    line.chars.insert(first_char_index, bottom_left);
                 } else {
                     if let Some(color) = border_color {
                         line.chars.insert(0, fg_reset_code);
@@ -200,12 +201,12 @@ impl Canvas {
 
         if has_right {
             let real_len = self.buffer.get(0).map(|l| l.chars.len()).unwrap_or(0);
+            let last_char_index = real_len - border_color.is_some() as usize; // real_len is reset code
             for (i, line) in self.buffer.iter_mut().enumerate() {
                 if i == 0 && has_top {
-                    line.chars.insert(real_len - 1, top_right); // real_len is reset code
+                    line.chars.insert(last_char_index, top_right);
                 } else if i == lines - 1 && has_bottom {
-                    let real_len = line.chars.len();
-                    line.chars.insert(real_len - 1, bottom_right); // real_len is reset code
+                    line.chars.insert(last_char_index, bottom_right);
                 } else {
                     if let Some(color) = border_color {
                         line.chars.push(Char::Code(Code::Foreground(color)));
