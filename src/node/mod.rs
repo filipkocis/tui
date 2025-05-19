@@ -8,7 +8,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crossterm::event::Event;
 
-use crate::{Canvas, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport};
+use crate::{Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Unique node id
@@ -411,41 +411,41 @@ impl Node {
     }
 
     /// Handle a single event for this node. returns tru wheter it should stop propagating
-    pub fn handle_event(&mut self, event: &Event, is_capturing: bool) -> bool {
+    pub fn handle_event(&mut self, ctx: &mut Context, event: &Event, is_capturing: bool) -> bool {
         self.handlers
             .clone()
             .borrow_mut()
-            .handle(self, event, is_capturing)
+            .handle(ctx, self, event, is_capturing)
     }
 
-    /// Propagate event down to children.
-    pub fn propagate_event(&mut self, event: &Event) {
-        let handled = self.handlers.clone().borrow_mut().handle(self, event, true);
-
-        if !handled {
-            for child in &self.children {
-                let mut child = child.borrow_mut();
-                child.propagate_event(event);
-            }
-        }
-    }
-
-    /// Bubble event up to the root node.
-    pub fn bubble_event(&mut self, event: &Event) {
-        let handled = self
-            .handlers
-            .clone()
-            .borrow_mut()
-            .handle(self, event, false);
-
-        if !handled {
-            if let Some(ref parent) = self.parent {
-                parent.upgrade().map(|parent| {
-                    parent.borrow_mut().bubble_event(event);
-                });
-            }
-        }
-    }
+    // /// Propagate event down to children.
+    // pub fn propagate_event(&mut self, event: &Event) {
+    //     let handled = self.handlers.clone().borrow_mut().handle(self, event, true);
+    //
+    //     if !handled {
+    //         for child in &self.children {
+    //             let mut child = child.borrow_mut();
+    //             child.propagate_event(event);
+    //         }
+    //     }
+    // }
+    //
+    // /// Bubble event up to the root node.
+    // pub fn bubble_event(&mut self, event: &Event) {
+    //     let handled = self
+    //         .handlers
+    //         .clone()
+    //         .borrow_mut()
+    //         .handle(self, event, false);
+    //
+    //     if !handled {
+    //         if let Some(ref parent) = self.parent {
+    //             parent.upgrade().map(|parent| {
+    //                 parent.borrow_mut().bubble_event(event);
+    //             });
+    //         }
+    //     }
+    // }
 
     #[inline]
     pub fn add_handler<F: IntoEventHandler>(&mut self, handler: F, is_capturing: bool) {

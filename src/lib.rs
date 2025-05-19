@@ -23,11 +23,23 @@ use std::{cell::RefCell, io, rc::Rc, time::Duration};
 use crossterm::{
     self,
     event::{
-        self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture, Event,
+        self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
+        Event, MouseEvent, MouseEventKind,
     },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+
+#[derive(Debug, Default)]
+pub struct Context {
+    /// Current hold position with it's target, from a mouse_down event.
+    /// During drag, this field does not get changed automatically.
+    hold: Option<(u16, u16, NodeId)>,
+
+    hover: Option<WeakNodeHandle>,
+    focus: Option<WeakNodeHandle>,
+    drag: Option<WeakNodeHandle>,
+}
 
 pub struct App {
     raw: bool,
@@ -37,6 +49,8 @@ pub struct App {
     hitmap: HitMap,
     canvas: Canvas,
     viewport: Viewport,
+
+    context: Context,
 }
 
 impl App {
@@ -48,6 +62,8 @@ impl App {
             hitmap: HitMap::default(),
             canvas: Canvas::default(),
             viewport: Viewport::new(),
+
+            context: Context::default(),
         }
     }
 
@@ -108,8 +124,8 @@ impl App {
                         }
                         event => println!("{event:?}"),
                     },
-                    Event::Mouse(_event) => {
-                        self.dispatch_mouse_event(&event);
+                    Event::Mouse(mouse_event) => {
+                        self.dispatch_mouse_event(mouse_event);
                     }
                     Event::Resize(width, height) => {
                         resize = Some((width, height));
@@ -145,17 +161,26 @@ impl App {
     }
 
     /// Dispatches a mouse event to the target node based on the hitmap.
-    pub fn dispatch_mouse_event(&mut self, event: &Event) {
-        let (column, row) = match event {
-            Event::Mouse(event) => (event.column, event.row),
-            _ => return,
-        };
+    pub fn dispatch_mouse_event(&mut self, mouse_event: MouseEvent) {
+        let (column, row) = (mouse_event.column, mouse_event.row);
 
-        let Some(target) = self.hitmap.get(column, row) else {
+        let Some(mut target_id) = self.hitmap.get(column, row) else {
             return;
         };
 
-        let Some(path) = self.get_path_to(target) else {
+        // Handle hold, and replace target_id if dragging
+        match mouse_event.kind {
+            MouseEventKind::Down(_) => self.context.hold = Some((column, row, target_id)),
+            MouseEventKind::Up(_) => self.context.hold = None,
+            MouseEventKind::Drag(_) => {
+                if let Some((_, _, old_target_id)) = self.context.hold {
+                    target_id = old_target_id;
+                }
+            }
+            _ => {}
+        }
+
+        let Some(path) = self.get_path_to(target_id) else {
             return;
         };
 
@@ -163,10 +188,12 @@ impl App {
             return;
         };
 
+        let event = &Event::Mouse(mouse_event);
+
         // Capture phase
         for node in path.iter().skip(1).rev() {
             let mut node = node.borrow_mut();
-            if node.handle_event(event, true) {
+            if node.handle_event(&mut self.context, event, true) {
                 return;
             }
         }
@@ -174,8 +201,8 @@ impl App {
         // Target phase
         {
             let mut node = target.borrow_mut();
-            let capture = node.handle_event(event, true);
-            let bubble = node.handle_event(event, false);
+            let capture = node.handle_event(&mut self.context, event, true);
+            let bubble = node.handle_event(&mut self.context, event, false);
             if capture || bubble {
                 return;
             }
@@ -184,7 +211,7 @@ impl App {
         // Bubble phase
         for node in path.iter().skip(1) {
             let mut node = node.borrow_mut();
-            if node.handle_event(event, false) {
+            if node.handle_event(&mut self.context, event, false) {
                 return;
             }
         }

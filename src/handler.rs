@@ -2,17 +2,17 @@ use std::fmt::Debug;
 
 use crossterm::event::Event;
 
-use crate::Node;
+use crate::{Context, Node};
 
-pub type EventHandler = Box<dyn FnMut(&Event, &mut Node) -> bool>;
+pub type EventHandler = Box<dyn FnMut(&mut Context, &Event, &mut Node) -> bool>;
 
 pub trait IntoEventHandler {
     fn into_event_handler(self) -> EventHandler;
 }
 
 impl<F> IntoEventHandler for F
-where 
-    F: FnMut(&Event, &mut Node) -> bool + 'static
+where
+    F: FnMut(&mut Context, &Event, &mut Node) -> bool + 'static,
 {
     #[inline]
     fn into_event_handler(self) -> EventHandler {
@@ -46,7 +46,13 @@ impl EventHandlers {
         }
     }
 
-    pub fn handle(&mut self, node: &mut Node, event: &Event, is_capturing: bool) -> bool {
+    pub fn handle(
+        &mut self,
+        ctx: &mut Context,
+        node: &mut Node,
+        event: &Event,
+        is_capturing: bool,
+    ) -> bool {
         let mut handled = false;
 
         let handlers = if is_capturing {
@@ -56,7 +62,7 @@ impl EventHandlers {
         };
 
         for handler in handlers {
-            if handler(event, node) {
+            if handler(ctx, event, node) {
                 handled = true;
             }
         }
