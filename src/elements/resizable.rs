@@ -26,6 +26,14 @@ impl Resizable {
                 return result;
             }
 
+            // Dont resize if dragging is happening at < than the node's offset,
+            // relative is clamped to 0 and may cause false positives
+            if drag_event.absolute.0 < node.style.offset.x().max(0) as u16
+                || drag_event.absolute.1 < node.style.offset.y().max(0) as u16
+            {
+                return result;
+            }
+
             if drag_x && allow_x_resize {
                 let content_width = node.style.size.width.computed_size();
                 let new_width = (content_width as i16 + drag_event.delta.0).max(0) as u16;
