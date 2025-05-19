@@ -317,8 +317,8 @@ impl Canvas {
         }
 
         let start = (viewport.min.0 as i16 - x).max(0) as usize;
-        let end = viewport.max.0.saturating_sub(viewport.min.0) as usize;
-        let line = line.cutout(start, end);
+        let take = viewport.max.0.saturating_sub(viewport.min.0) as usize;
+        let line = line.cutout(start, start + take);
 
         self.buffer[y as usize].paste_on_top(&line, x.max(0) as usize);
     }
