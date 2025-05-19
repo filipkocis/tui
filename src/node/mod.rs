@@ -19,7 +19,7 @@ impl NodeId {
     fn generate_id() -> Self {
         use std::sync::atomic::{AtomicU64, Ordering};
 
-        static ID: AtomicU64 = AtomicU64::new(0);
+        static ID: AtomicU64 = AtomicU64::new(1);
         Self(ID.fetch_add(1, Ordering::Relaxed))
     }
 
