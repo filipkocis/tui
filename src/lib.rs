@@ -206,20 +206,33 @@ impl App {
             _ => {}
         }
 
+        self.dispatch_event(Event::Mouse(mouse_event), target_id);
+    }
+
+    /// Dispatches an event to the target node in capture, target and bubble phases
+    pub fn dispatch_event(&mut self, event: Event, target_id: NodeId) {
         let Some(path) = self.get_path_to(target_id) else {
             return;
         };
 
-        let Some(target) = path.first() else {
+        let Some((target, target_weak)) = path.first() else {
             return;
         };
 
-        let event = &Event::Mouse(mouse_event);
+        // Create event handler context
+        let mut context = Context::new(
+            &mut self.context, 
+            target_id, 
+            event,
+            target_weak.clone(),
+            target_weak.clone(),
+        );
 
         // Capture phase
-        for node in path.iter().skip(1).rev() {
+        for (node, weak) in path.iter().skip(1).rev() {
             let mut node = node.borrow_mut();
-            if node.handle_event(&mut self.context, event, true) {
+            context.self_weak = weak.clone();
+            if node.handle_event(&mut context, true) {
                 return;
             }
         }
@@ -227,17 +240,23 @@ impl App {
         // Target phase
         {
             let mut node = target.borrow_mut();
-            let capture = node.handle_event(&mut self.context, event, true);
-            let bubble = node.handle_event(&mut self.context, event, false);
+            context.self_weak = target_weak.clone();
+            context.is_target_phase = true;
+
+            let capture = node.handle_event(&mut context, true);
+            let bubble = node.handle_event(&mut context, false);
+            context.is_target_phase = false;
+
             if capture || bubble {
                 return;
             }
         }
 
         // Bubble phase
-        for node in path.iter().skip(1) {
+        for (node, weak) in path.iter().skip(1) {
             let mut node = node.borrow_mut();
-            if node.handle_event(&mut self.context, event, false) {
+            context.self_weak = weak.clone();
+            if node.handle_event(&mut context, false) {
                 return;
             }
         }
