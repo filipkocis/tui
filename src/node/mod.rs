@@ -454,14 +454,14 @@ impl Node {
 
     /// Builds a `path` from target to root node, returning true if the target was found.
     /// TODO: remove this, this is a temporary solution
-    pub fn build_path_to_node(&self, id: NodeId, path: &mut Vec<Rc<RefCell<Node>>>) -> bool {
+    pub fn build_path_to_node(&self, id: NodeId, path: &mut Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>) -> bool {
         if self.id() == id {
             return true;
         }
 
         for child in &self.children {
             if child.borrow().build_path_to_node(id, path) {
-                path.push(child.0.clone());
+                path.push((child.0.clone(), child.weak()));
                 return true;
             }
         }

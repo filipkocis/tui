@@ -160,11 +160,11 @@ impl App {
 
     /// Returns the path from the target node `id` to the root node.
     /// TODO: temporary solution, remove in the future
-    pub fn get_path_to(&self, id: NodeId) -> Option<Vec<Rc<RefCell<Node>>>> {
+    pub fn get_path_to(&self, id: NodeId) -> Option<Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>> {
         let mut path = Vec::new();
 
         if self.root.borrow().build_path_to_node(id, &mut path) {
-            path.push(self.root.0.clone());
+            path.push((self.root.0.clone(), self.root.weak()));
             Some(path)
         } else {
             None
