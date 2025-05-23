@@ -6,8 +6,6 @@ use text::Text;
 
 use std::{cell::RefCell, rc::Rc};
 
-use crossterm::event::Event;
-
 use crate::{Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -411,11 +409,11 @@ impl Node {
     }
 
     /// Handle a single event for this node. returns tru wheter it should stop propagating
-    pub fn handle_event(&mut self, ctx: &mut Context, event: &Event, is_capturing: bool) -> bool {
+    pub fn handle_event(&mut self, ctx: &mut Context, is_capturing: bool) -> bool {
         self.handlers
             .clone()
             .borrow_mut()
-            .handle(ctx, self, event, is_capturing)
+            .handle(ctx, self, is_capturing)
     }
 
     // /// Propagate event down to children.

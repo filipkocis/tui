@@ -1,5 +1,6 @@
 mod canvas;
 mod char;
+mod context;
 mod elements;
 mod handler;
 mod hitmap;
@@ -10,6 +11,7 @@ mod viewport;
 
 pub use canvas::Canvas;
 pub use char::{Char, Code};
+pub use context::{AppContext, Context};
 pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use hitmap::HitMap;
@@ -24,22 +26,11 @@ use crossterm::{
     self,
     event::{
         self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
-        Event, MouseEvent, MouseEventKind,
+        Event, KeyEvent, MouseEvent, MouseEventKind,
     },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-
-#[derive(Debug, Default)]
-pub struct Context {
-    /// Current hold position with it's target, from a mouse_down event.
-    /// During drag, this field does not get changed automatically.
-    hold: Option<(u16, u16, NodeId)>,
-
-    hover: Option<WeakNodeHandle>,
-    focus: Option<WeakNodeHandle>,
-    drag: Option<WeakNodeHandle>,
-}
 
 pub struct App {
     raw: bool,
@@ -50,7 +41,7 @@ pub struct App {
     canvas: Canvas,
     viewport: Viewport,
 
-    context: Context,
+    context: AppContext,
 }
 
 impl App {
@@ -79,7 +70,7 @@ impl App {
             canvas: Canvas::default(),
             viewport: Viewport::new(),
 
-            context: Context::default(),
+            context: AppContext::default(),
         }
     }
 

@@ -1,4 +1,4 @@
-use crate::{Node, SizeValue};
+use crate::{Context, Node, SizeValue};
 
 use super::{on_drag_handler, MouseDragEvent, OnDragResult};
 
@@ -8,7 +8,7 @@ impl Resizable {
     pub fn new(allow_x_resize: bool, allow_y_resize: bool) -> Node {
         let mut node = Node::default();
 
-        let on_drag = move |_: &mut _, drag_event: MouseDragEvent, node: &mut Node| {
+        let on_drag = move |_: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
 
             if !allow_x_resize && !allow_y_resize {

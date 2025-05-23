@@ -1,4 +1,4 @@
-use crossterm::event::{Event, KeyModifiers, MouseEventKind};
+use crossterm::event::{KeyModifiers, MouseEventKind};
 
 use crate::{Context, IntoEventHandler, Node};
 
@@ -30,14 +30,14 @@ pub struct OnDragResult {
 pub fn on_drag_handler(
     mut on_drag: impl FnMut(&mut Context, MouseDragEvent, &mut Node) -> OnDragResult + 'static,
 ) -> impl IntoEventHandler {
-    move |ctx: &mut Context, event: &Event, node: &mut Node| {
+    move |ctx: &mut Context, node: &mut Node| {
         // Has hold position
-        let Some(mut hold) = ctx.hold else {
+        let Some(mut hold) = ctx.app.hold else {
             return false;
         };
 
         // Is mouse event
-        let Some(mouse_event) = event.as_mouse_event() else {
+        let Some(mouse_event) = ctx.event.as_mouse_event() else {
             return false;
         };
 
@@ -68,7 +68,7 @@ pub fn on_drag_handler(
             hold.1 = end.1 as u16;
         }
 
-        ctx.hold = Some(hold);
+        ctx.app.hold = Some(hold);
 
         result.stop_propagation
     }
@@ -87,7 +87,7 @@ impl Draggable {
     ) -> Node {
         let mut node = Node::default();
 
-        let on_drag = move |_: &mut _, drag_event: MouseDragEvent, node: &mut Node| {
+        let on_drag = move |_: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
 
             if drag_event.modifiers != modifiers {

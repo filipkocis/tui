@@ -1,4 +1,4 @@
-use crossterm::event::{Event, KeyModifiers, MouseButton, MouseEventKind};
+use crossterm::event::{KeyModifiers, MouseButton, MouseEventKind};
 
 use crate::{text::Text, Context, IntoEventHandler, Node, Size};
 
@@ -16,8 +16,8 @@ pub type MouseClickHandler = Box<dyn FnMut(MouseClickEvent, &mut Node) -> bool>;
 pub fn on_click_handler(
     mut on_click: impl FnMut(MouseClickEvent, &mut Node) -> bool + 'static,
 ) -> impl IntoEventHandler {
-    move |_: &mut Context, event: &Event, node: &mut Node| {
-        let Some(mouse_event) = event.as_mouse_event() else {
+    move |c: &mut Context, node: &mut Node| {
+        let Some(mouse_event) = c.event.as_mouse_event() else {
             return false;
         };
 
