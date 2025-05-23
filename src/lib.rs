@@ -54,6 +54,22 @@ pub struct App {
 }
 
 impl App {
+    /// Registers a panic hook to cleanup the terminal state. This function doesn't replace any
+    /// existing panic hook, it extends it with `take_hook()` and then `set_hook()`.
+    ///
+    /// Without calling this, you will not see any panic messages while in an `AlternateScreen`
+    pub fn register_panic_hook() {
+        let hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic_info| {
+            // Cleanup terminal state
+            let _ = disable_raw_mode();
+            let _ = execute!(io::stdout(), LeaveAlternateScreen);
+
+            // Call the original panic hook
+            hook(panic_info);
+        }));
+    }
+
     pub fn new(root: NodeHandle) -> Self {
         App {
             raw: true,
