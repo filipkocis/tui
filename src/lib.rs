@@ -173,17 +173,11 @@ impl App {
 
     /// Dispatches a key event to the target node based on current focus.
     pub fn dispatch_key_event(&mut self, key_event: KeyEvent) {
-        let Some(ref focus) = self.context.focus else {
+        let Some((focus_id, _)) = self.context.focus else {
             return;
         };
 
-        let Some(target) = focus.upgrade() else {
-            return;
-        };
-
-        let target_id = target.borrow().id();
-
-        self.dispatch_event(Event::Key(key_event), target_id);
+        self.dispatch_event(Event::Key(key_event), focus_id);
     }
 
     /// Dispatches a mouse event to the target node based on the hitmap.
@@ -218,6 +212,13 @@ impl App {
         let Some((target, target_weak)) = path.first() else {
             return;
         };
+
+        // Set focus to target node on mouse down
+        if let Some(mouse_event) = event.as_mouse_event() {
+            if mouse_event.kind.is_down() {
+                self.context.focus = Some((target_id, target_weak.clone()));
+            }
+        }
 
         // Create event handler context
         let mut context = Context::new(

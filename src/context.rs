@@ -9,7 +9,8 @@ pub struct AppContext {
     /// During drag, this field does not get changed automatically.
     pub hold: Option<(u16, u16, NodeId)>,
 
-    /// Current focus has to be set manually.
+    /// Current node with focus. Set on mouse down event, before the event is dispatched. 
+    /// Should be changed manually to implement more complex focus logic.    
     pub focus: Option<(NodeId, WeakNodeHandle)>,
 
     pub hover: Option<WeakNodeHandle>,
