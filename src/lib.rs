@@ -125,14 +125,18 @@ impl App {
 
                 use event::*;
                 match event {
-                    Event::Key(event) => match event.code {
-                        KeyCode::Esc => {
-                            return Ok(());
+                    Event::Key(event) => {
+                        self.dispatch_key_event(event);
+                        match event.code {
+                            KeyCode::Esc => {
+                                return Ok(());
+                            }
+                            event => println!("{event:?}"),
                         }
-                        event => println!("{event:?}"),
-                    },
+                    }
                     Event::Mouse(mouse_event) => {
                         self.dispatch_mouse_event(mouse_event);
+                        resize = Some(self.viewport.screen); // just for debug, remove later
                     }
                     Event::Resize(width, height) => {
                         resize = Some((width, height));
@@ -165,6 +169,21 @@ impl App {
         } else {
             None
         }
+    }
+
+    /// Dispatches a key event to the target node based on current focus.
+    pub fn dispatch_key_event(&mut self, key_event: KeyEvent) {
+        let Some(ref focus) = self.context.focus else {
+            return;
+        };
+
+        let Some(target) = focus.upgrade() else {
+            return;
+        };
+
+        let target_id = target.borrow().id();
+
+        self.dispatch_event(Event::Key(key_event), target_id);
     }
 
     /// Dispatches a mouse event to the target node based on the hitmap.
