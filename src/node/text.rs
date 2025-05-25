@@ -90,7 +90,11 @@ impl Text {
     /// Creates a text object from a string
     pub fn plain(input: &str) -> Self {
         let lines = input.lines();
-        let lines = lines.map(|line| line.to_string()).collect::<Vec<_>>();
+        let mut lines = lines.map(|line| line.to_string()).collect::<Vec<_>>();
+        if input.ends_with('\n') || input.is_empty() {
+            lines.push(String::new());
+        }
+
         let size_total = (
             lines.iter().map(|l| l.chars().count()).max().unwrap_or(0),
             lines.len(),
@@ -112,11 +116,16 @@ impl Text {
             .into_string()
             .map_err(|_| Error::new(ErrorKind::Other, "Invalid UTF-8 in path"))?;
 
-        let lines = std::fs::read_to_string(&absolute_path)
-            .map_err(|_| Error::new(ErrorKind::Other, "Failed to read file"))?
+        let content = std::fs::read_to_string(&absolute_path)
+            .map_err(|_| Error::new(ErrorKind::Other, "Failed to read file"))?;
+        let mut lines = content
             .lines()
             .map(|line| line.to_string())
             .collect::<Vec<_>>();
+
+        if content.ends_with('\n') || content.is_empty() {
+            lines.push(String::new());
+        }
 
         let size_total = (
             lines.iter().map(|l| l.chars().count()).max().unwrap_or(0),
