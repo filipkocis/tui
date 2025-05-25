@@ -12,7 +12,27 @@ pub enum TextInput {
 }
 
 impl TextInput {
+    /// Immutable reference to the lines of the original text input.
+    #[inline]
     pub fn get_lines(&self) -> &[String] {
+        match self {
+            TextInput::Plain(lines) => lines,
+            TextInput::File(_, lines) => lines,
+        }
+    }
+
+    /// Mutable reference to the lines of the original text input.
+    #[inline]
+    pub fn get_lines_mut(&mut self) -> &mut Vec<String> {
+        match self {
+            TextInput::Plain(lines) => lines,
+            TextInput::File(_, lines) => lines,
+        }
+    }
+
+    /// Consumes self and returns the lines of the original text input.
+    #[inline]
+    pub fn into_lines(self) -> Vec<String> {
         match self {
             TextInput::Plain(lines) => lines,
             TextInput::File(_, lines) => lines,
@@ -72,6 +92,9 @@ pub struct Text {
     pub original_size: (usize, usize),
     /// Size of the processed text
     pub processed_size: (usize, usize),
+
+    /// Cursor position in the text, used for rendering
+    pub cursor: Option<(u16, u16)>,
 }
 
 impl Text {
@@ -84,6 +107,7 @@ impl Text {
             original_size: size,
             processed_size: (0, 0),
             wrap: TextWrap::default(),
+            cursor: None,
         }
     }
 
