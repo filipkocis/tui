@@ -166,6 +166,8 @@ impl App {
                         resize = Some((width, height));
                         println!("Resize {width}x{height}")
                     }
+                    Event::Paste(paste) => self.dispatch_paste_event(paste),
+
                     event => println!("{event:?}"),
                 }
 
@@ -193,6 +195,15 @@ impl App {
         } else {
             None
         }
+    }
+
+    /// Dispatches a paste event to the target node based on current focus.
+    pub fn dispatch_paste_event(&mut self, paste: String) {
+        let Some((focus_id, _)) = self.context.focus else {
+            return;
+        };
+
+        self.dispatch_event(Event::Paste(paste), focus_id);
     }
 
     /// Dispatches a key event to the target node based on current focus.
