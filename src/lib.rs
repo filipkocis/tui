@@ -115,7 +115,25 @@ impl App {
             .render_to(self.viewport, &mut self.canvas, &mut self.hitmap);
         self.canvas.prune_redundant_codes();
         self.canvas.render()?;
+        self.move_cursor_to_focus()?;
         Ok(())
+    }
+
+    pub fn move_cursor_to_focus(&mut self) -> io::Result<()> {
+        let Some((_, ref focus_weak)) = self.context.focus else {
+            return Ok(());
+        };
+
+        let Some(focus) = focus_weak.upgrade() else {
+            return Ok(());
+        };
+
+        let focus = focus.borrow();
+        let Some((cursor_x, cursor_y)) = focus.absolute_cursor_position() else {
+            return Ok(());
+        };
+
+        execute!(io::stdout(), crossterm::cursor::MoveTo(cursor_x, cursor_y))
     }
 
     pub fn run(&mut self) -> io::Result<()> {
