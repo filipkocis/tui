@@ -6,7 +6,9 @@ use text::Text;
 
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport};
+use crate::{
+    Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Unique node id
@@ -87,6 +89,30 @@ impl Node {
     #[inline]
     pub fn hit_test(&self, x: i16, y: i16) -> bool {
         self.canvas.hit_test(x, y)
+    }
+
+    /// Returns the node's canvas position
+    #[inline]
+    pub fn absolute_position(&self) -> (i16, i16) {
+        self.canvas.position
+    }
+
+    /// Returns the node's `canvas.max(0) + cursor` position combined with the border and padding.
+    /// Returns `None` if node's [`Text`] cursor is not set.
+    #[inline]
+    pub fn absolute_cursor_position(&self) -> Option<(u16, u16)> {
+        let Some((cx, cy)) = self.content.cursor else {
+            return None;
+        };
+        let (px, py) = self.canvas.position;
+
+        let xw = self.style.border.2 as u16 + self.style.padding.left;
+        let xh = self.style.border.0 as u16 + self.style.padding.top;
+
+        Some((
+            (px + xw as i16).max(0) as u16 + cx,
+            (py + xh as i16).max(0) as u16 + cy,
+        ))
     }
 
     /// Primitive calculation of `pos - node.canvas.position`, clamped to 0
@@ -454,7 +480,11 @@ impl Node {
 
     /// Builds a `path` from target to root node, returning true if the target was found.
     /// TODO: remove this, this is a temporary solution
-    pub fn build_path_to_node(&self, id: NodeId, path: &mut Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>) -> bool {
+    pub fn build_path_to_node(
+        &self,
+        id: NodeId,
+        path: &mut Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>,
+    ) -> bool {
         if self.id() == id {
             return true;
         }
