@@ -20,13 +20,18 @@ pub use node::{text, Node, NodeHandle, NodeId, WeakNodeHandle};
 pub use style::{Offset, Padding, Size, SizeValue, Style};
 pub use viewport::Viewport;
 
-use std::{cell::RefCell, io, rc::Rc, time::Duration};
+use std::{
+    cell::RefCell,
+    io::{self, stdin, Read},
+    rc::Rc,
+    time::Duration,
+};
 
 use crossterm::{
     self,
     event::{
-        self, DisableFocusChange, DisableMouseCapture, EnableFocusChange, EnableMouseCapture,
-        Event, KeyEvent, MouseEvent, MouseEventKind,
+        self, DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
+        EnableFocusChange, EnableMouseCapture, Event, KeyEvent, MouseEvent, MouseEventKind,
     },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -80,7 +85,8 @@ impl App {
                 io::stdout(),
                 EnterAlternateScreen,
                 EnableMouseCapture,
-                EnableFocusChange
+                EnableFocusChange,
+                EnableBracketedPaste,
             )?
         }
 
@@ -222,8 +228,8 @@ impl App {
 
         // Create event handler context
         let mut context = Context::new(
-            &mut self.context, 
-            target_id, 
+            &mut self.context,
+            target_id,
             event,
             target_weak.clone(),
             target_weak.clone(),
@@ -271,7 +277,8 @@ impl Drop for App {
                 io::stdout(),
                 LeaveAlternateScreen,
                 DisableMouseCapture,
-                DisableFocusChange
+                DisableFocusChange,
+                DisableBracketedPaste,
             )
             .expect("Failed to leave alternate screen");
         }
