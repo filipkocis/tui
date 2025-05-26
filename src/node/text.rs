@@ -255,7 +255,7 @@ impl Text {
                 let line_len = line.len();
                 let parts = (line_len as f32 / max_width.max(1) as f32).ceil() as usize;
 
-                if parts == 1 {
+                if parts <= 1 {
                     finalized.push(line.clone());
                     continue;
                 }
