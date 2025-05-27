@@ -16,8 +16,8 @@ pub struct Input {
 impl Input {
     pub fn new(placeholder: &str) -> Node {
         let mut root = Node::default();
-        root.content = placeholder.into();
-        root.content.cursor = Some((0, 0));
+        root.text = placeholder.into();
+        root.text.cursor = Some((0, 0));
 
         let mut input = Self {
             placeholder: placeholder.to_string(),
@@ -72,22 +72,20 @@ impl Input {
         self.cursor.0 = 0;
         self.cursor.1 += 1;
         if self.visible_placeholder {
-            node.content = "\n".into();
+            node.text = "\n".into();
             self.visible_placeholder = false;
         } else {
-            node.content
-                .input
-                .insert(self.cursor.1, BufferLine::default());
+            node.text.input.insert(self.cursor.1, BufferLine::default());
         }
     }
 
     fn add_char(&mut self, char: char, node: &mut Node) {
         if self.visible_placeholder {
-            node.content = "".into();
+            node.text = "".into();
             self.visible_placeholder = false;
         }
 
-        let line = &mut node.content.input[self.cursor.1];
+        let line = &mut node.text.input[self.cursor.1];
         let index = line
             .grapheme_to_byte_index(self.cursor.0)
             .unwrap_or(line.content().len());
@@ -98,9 +96,9 @@ impl Input {
 
     fn add_string(&mut self, text: &str, node: &mut Node) {
         if self.visible_placeholder {
-            node.content = text.into();
-            let lines_len = node.content.input.len();
-            let final_line_len = node.content.input.last().map_or(0, |l| l.count());
+            node.text = text.into();
+            let lines_len = node.text.input.len();
+            let final_line_len = node.text.input.last().map_or(0, |l| l.count());
             self.cursor = (final_line_len, lines_len.saturating_sub(1));
             self.visible_placeholder = false;
             return;
@@ -108,7 +106,7 @@ impl Input {
 
         let text: Text = text.into();
         let new_lines = text.input;
-        let lines = &mut node.content.input;
+        let lines = &mut node.text.input;
 
         if new_lines.len() == 1 {
             let line = &mut lines[self.cursor.1];
@@ -144,7 +142,7 @@ impl Input {
     }
 
     fn remove_char(&mut self, node: &mut Node) {
-        let lines = &mut node.content.input;
+        let lines = &mut node.text.input;
         if self.cursor.0 > 0 {
             self.cursor.0 -= 1;
             lines[self.cursor.1].remove(self.cursor.0);
@@ -162,12 +160,12 @@ impl Input {
 
     fn process_text(&mut self, node: &mut Node) {
         if self.visible_placeholder {
-            node.content = self.placeholder.clone().into();
+            node.text = self.placeholder.clone().into();
             self.cursor = (0, 0);
         } else {
-            node.content.process_text();
+            node.text.process_text();
         }
 
-        node.content.cursor = Some((self.cursor.0 as u16, self.cursor.1 as u16));
+        node.text.cursor = Some((self.cursor.0 as u16, self.cursor.1 as u16));
     }
 }

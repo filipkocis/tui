@@ -55,7 +55,7 @@ pub struct Node {
 
     pub class: String,
     pub style: Style,
-    pub content: Text,
+    pub text: Text,
 
     /// Weak ref to parent. Use with caution to prevent deadlocks or memory leaks
     pub(crate) parent: Option<WeakNodeHandle>,
@@ -101,7 +101,7 @@ impl Node {
     /// Returns `None` if node's [`Text`] cursor is not set.
     #[inline]
     pub fn absolute_cursor_position(&self) -> Option<(u16, u16)> {
-        let Some((cx, cy)) = self.content.cursor else {
+        let Some((cx, cy)) = self.text.cursor else {
             return None;
         };
         let (px, py) = self.canvas.position;
@@ -190,7 +190,7 @@ impl Node {
         // Calculate the size of this node
         let (text_width, text_height) = self
             .style
-            .compute_percentage_size(parent_available_size, &mut self.content);
+            .compute_percentage_size(parent_available_size, &mut self.text);
 
         // Calculate the available content size of tis node
         let available_content_size = self.available_content_size();
@@ -255,7 +255,7 @@ impl Node {
     /// Does not clamp the size
     pub fn calculate_auto_intrinsic_size(&mut self) {
         // Compute intrinsic size and text with auto size
-        self.style.compute_intrinsic_size(&self.content);
+        self.style.compute_intrinsic_size(&self.text);
 
         // Either max_size or total_size depending on flex direction
         let mut width = self.style.size.width.computed_size();
@@ -317,7 +317,7 @@ impl Node {
         };
 
         // Add text (before children)
-        canvas.add_text(&self.content, self.style.size);
+        canvas.add_text(&self.text, self.style.size);
 
         // Start children after text (always flex-col)
         let y_after_text = {

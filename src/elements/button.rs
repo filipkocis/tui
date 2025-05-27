@@ -43,8 +43,8 @@ impl Button {
     /// Constructs a new buttom [`Node`](Node)
     pub fn new(label: &str, on_click: Option<MouseClickHandler>) -> Node {
         let mut node = Node::default();
-        node.content = Text::plain(label);
-        let width = node.content.get_processed_size().0;
+        node.text = Text::plain(label);
+        let width = node.text.get_processed_size().0;
         node.style.size = Size::from_cells(width, 1);
         // node.style.grow = true;
 

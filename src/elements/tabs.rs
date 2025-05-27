@@ -1,7 +1,7 @@
 use crossterm::style::Color;
 
 use crate::{
-    text::{Text, CodeSpan},
+    text::{CodeSpan, Text},
     Code, Node, NodeHandle, Offset, Padding, Size, SizeValue,
 };
 
@@ -63,8 +63,8 @@ impl Tabs {
         let mut bottom_line = Node::default();
         let mut tabs = Node::default();
 
-        let (content, size) = get_content(default);
-        bottom_line.content = content;
+        let (text, size) = get_content(default);
+        bottom_line.text = text;
         bottom_line.style.offset = Offset::Translate(0, -1);
         bottom_line.style.size = Size::new(SizeValue::cells(size), SizeValue::cells(1));
         let bottom_line = bottom_line.into_handle();
@@ -85,8 +85,8 @@ impl Tabs {
             let on_click = Box::new(move |_, _: &mut _| {
                 if let Some(line) = bottom_line_weak.upgrade() {
                     let mut line = line.borrow_mut();
-                    let (content, size) = get_content(i);
-                    line.content = content;
+                    let (text, size) = get_content(i);
+                    line.text = text;
                     line.style.size.width = SizeValue::cells(size);
                 }
                 on_select(&label, &value);

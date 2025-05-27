@@ -10,7 +10,7 @@ impl Dialog {
     /// Returns a title text node
     fn title(title: &str) -> Node {
         let mut node = Node::default();
-        node.content = Text::plain(title);
+        node.text = Text::plain(title);
         node.style.bold = true;
         node
     }
@@ -18,7 +18,7 @@ impl Dialog {
     /// Returns a message text node
     fn message(message: &str) -> Node {
         let mut node = Node::default();
-        node.content = Text::plain(message);
+        node.text = Text::plain(message);
         node.style.max_size = Size::new(SizeValue::percent(100), SizeValue::auto());
         node
     }
