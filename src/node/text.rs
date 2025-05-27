@@ -3,50 +3,6 @@ use std::path::Path;
 use crate::{Char, Code, Line};
 
 #[derive(Debug)]
-/// Defines the input type for a text, stores the loaded content split into lines
-pub enum TextInput {
-    /// Plain text input
-    Plain(Vec<String>),
-    /// Text input from a file
-    File(String, Vec<String>),
-}
-
-impl TextInput {
-    /// Immutable reference to the lines of the original text input.
-    #[inline]
-    pub fn get_lines(&self) -> &[String] {
-        match self {
-            TextInput::Plain(lines) => lines,
-            TextInput::File(_, lines) => lines,
-        }
-    }
-
-    /// Mutable reference to the lines of the original text input.
-    #[inline]
-    pub fn get_lines_mut(&mut self) -> &mut Vec<String> {
-        match self {
-            TextInput::Plain(lines) => lines,
-            TextInput::File(_, lines) => lines,
-        }
-    }
-
-    /// Consumes self and returns the lines of the original text input.
-    #[inline]
-    pub fn into_lines(self) -> Vec<String> {
-        match self {
-            TextInput::Plain(lines) => lines,
-            TextInput::File(_, lines) => lines,
-        }
-    }
-}
-
-impl Default for TextInput {
-    fn default() -> Self {
-        TextInput::Plain(Vec::new())
-    }
-}
-
-#[derive(Debug)]
 /// Defines a style for a text span from start (inclusive) to end (exclusive)
 pub struct CodeSpan {
     pub code: Code,
@@ -77,7 +33,7 @@ pub enum TextWrap {
 /// Text object with styles and wrapping
 pub struct Text {
     /// The original text content, source of truth
-    pub input: TextInput,
+    pub input: Vec<String>,
     /// Color and attribute commands
     pub style: Vec<CodeSpan>,
     /// Text wrapping style
@@ -88,8 +44,8 @@ pub struct Text {
     /// Visible and wrapped text
     pub finalized: Vec<Line>,
 
-    /// Size of the orignal text (width, height)
-    pub original_size: (usize, usize),
+    // /// Size of the orignal text (width, height)
+    // pub original_size: (usize, usize),
     /// Size of the processed text
     pub processed_size: (usize, usize),
 
@@ -98,13 +54,18 @@ pub struct Text {
 }
 
 impl Text {
-    fn new_from(input: TextInput, size: (usize, usize)) -> Self {
+    fn new_from(input: Vec<String>) -> Self {
+        // let original_size = (
+        //     input.iter().map(|l| l.chars().count()).max().unwrap_or(0),
+        //     input.len(),
+        // );
+
         Self {
             input,
             style: Vec::new(),
             processed: Vec::new(),
             finalized: Vec::new(),
-            original_size: size,
+            // original_size,
             processed_size: (0, 0),
             wrap: TextWrap::default(),
             cursor: None,
@@ -113,18 +74,16 @@ impl Text {
 
     /// Creates a text object from a string
     pub fn plain(input: &str) -> Self {
-        let lines = input.lines();
-        let mut lines = lines.map(|line| line.to_string()).collect::<Vec<_>>();
+        let mut lines = input
+            .lines()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+
         if input.ends_with('\n') || input.is_empty() {
             lines.push(String::new());
         }
 
-        let size_total = (
-            lines.iter().map(|l| l.chars().count()).max().unwrap_or(0),
-            lines.len(),
-        );
-
-        let mut text = Self::new_from(TextInput::Plain(lines), size_total);
+        let mut text = Self::new_from(lines);
 
         text.process_text();
         text
@@ -142,29 +101,12 @@ impl Text {
 
         let content = std::fs::read_to_string(&absolute_path)
             .map_err(|_| Error::new(ErrorKind::Other, "Failed to read file"))?;
-        let mut lines = content
-            .lines()
-            .map(|line| line.to_string())
-            .collect::<Vec<_>>();
 
-        if content.ends_with('\n') || content.is_empty() {
-            lines.push(String::new());
-        }
-
-        let size_total = (
-            lines.iter().map(|l| l.chars().count()).max().unwrap_or(0),
-            lines.len(),
-        );
-
-        let mut text = Self::new_from(TextInput::File(absolute_path, lines), size_total);
-
-        text.process_text();
-        Ok(text)
+        Ok(Self::plain(&content))
     }
 
     /// Process the text and apply styles
     pub fn process_text(&mut self) {
-        let lines = self.input.get_lines();
         let mut processed = Vec::new();
 
         // let mut codes = self.style.iter();
@@ -172,7 +114,7 @@ impl Text {
         let mut current_code_index = 0;
         let mut current_index = 0;
 
-        for line in lines {
+        for line in &self.input {
             let mut large_code_span_index = None;
             let mut processed_line = Line::from_string(line);
             let line_len = processed_line.len();

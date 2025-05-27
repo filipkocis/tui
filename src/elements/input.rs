@@ -72,10 +72,7 @@ impl Input {
             node.content = "\n".into();
             self.visible_placeholder = false;
         } else {
-            node.content
-                .input
-                .get_lines_mut()
-                .insert(self.cursor.1, String::new());
+            node.content.input.insert(self.cursor.1, String::new());
         }
     }
 
@@ -85,7 +82,7 @@ impl Input {
             self.visible_placeholder = false;
         }
 
-        let lines = node.content.input.get_lines_mut();
+        let lines = &mut node.content.input;
         let line = &mut lines[self.cursor.1];
         line.insert(self.cursor.0, char);
 
@@ -95,21 +92,16 @@ impl Input {
     fn add_string(&mut self, text: &str, node: &mut Node) {
         if self.visible_placeholder {
             node.content = text.into();
-            let lines_len = node.content.input.get_lines().len();
-            let final_line_len = node
-                .content
-                .input
-                .get_lines()
-                .last()
-                .map_or(0, |l| l.chars().count());
+            let lines_len = node.content.input.len();
+            let final_line_len = node.content.input.last().map_or(0, |l| l.chars().count());
             self.cursor = (final_line_len, lines_len.saturating_sub(1));
             self.visible_placeholder = false;
             return;
         }
 
         let text: Text = text.into();
-        let new_lines = text.input.into_lines();
-        let lines = node.content.input.get_lines_mut();
+        let new_lines = text.input;
+        let lines = &mut node.content.input;
 
         if new_lines.len() == 1 {
             lines[self.cursor.1].insert_str(self.cursor.0, &new_lines[0]);
@@ -142,7 +134,7 @@ impl Input {
     }
 
     fn remove_char(&mut self, node: &mut Node) {
-        let lines = node.content.input.get_lines_mut();
+        let lines = &mut node.content.input;
         if self.cursor.0 > 0 {
             self.cursor.0 -= 1;
             lines[self.cursor.1].remove(self.cursor.0);
