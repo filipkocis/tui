@@ -1,6 +1,9 @@
 use crossterm::event::KeyCode;
 
-use crate::{text::Text, Context, Node};
+use crate::{
+    text::{BufferLine, Text},
+    Context, Node,
+};
 
 /// A simple text input element that allows for multi-line input.
 /// The struct itself is used inside the [node's](Node) event handler.
@@ -72,7 +75,9 @@ impl Input {
             node.content = "\n".into();
             self.visible_placeholder = false;
         } else {
-            node.content.input.insert(self.cursor.1, String::new());
+            node.content
+                .input
+                .insert(self.cursor.1, BufferLine::default());
         }
     }
 
@@ -82,9 +87,11 @@ impl Input {
             self.visible_placeholder = false;
         }
 
-        let lines = &mut node.content.input;
-        let line = &mut lines[self.cursor.1];
-        line.insert(self.cursor.0, char);
+        let line = &mut node.content.input[self.cursor.1];
+        let index = line
+            .grapheme_to_byte_index(self.cursor.0)
+            .unwrap_or(line.content().len());
+        line.insert(index, char);
 
         self.cursor.0 += 1;
     }
@@ -93,7 +100,7 @@ impl Input {
         if self.visible_placeholder {
             node.content = text.into();
             let lines_len = node.content.input.len();
-            let final_line_len = node.content.input.last().map_or(0, |l| l.chars().count());
+            let final_line_len = node.content.input.last().map_or(0, |l| l.count());
             self.cursor = (final_line_len, lines_len.saturating_sub(1));
             self.visible_placeholder = false;
             return;
@@ -104,17 +111,20 @@ impl Input {
         let lines = &mut node.content.input;
 
         if new_lines.len() == 1 {
-            lines[self.cursor.1].insert_str(self.cursor.0, &new_lines[0]);
-            self.cursor.0 += new_lines[0].chars().count();
+            let line = &mut lines[self.cursor.1];
+            let index = line
+                .grapheme_to_byte_index(self.cursor.0)
+                .unwrap_or(line.content().len());
+            line.insert_str(index, new_lines[0].content());
+            self.cursor.0 += new_lines[0].count();
         } else {
             let old_line = lines.remove(self.cursor.1);
             let mid_index = old_line
-                .char_indices()
-                .nth(self.cursor.0)
-                .map_or(old_line.len(), |(i, _)| i);
-            let (left_part, right_part) = old_line.split_at(mid_index);
+                .grapheme_to_byte_index(self.cursor.0)
+                .unwrap_or(old_line.content().len());
+            let (left_part, right_part) = old_line.content().split_at(mid_index);
 
-            self.cursor.0 = new_lines.last().map(|l| l.chars().count()).unwrap_or(0);
+            self.cursor.0 = new_lines.last().map(|l| l.count()).unwrap_or(0);
 
             let original_y = self.cursor.1;
             for line in new_lines {
@@ -141,11 +151,11 @@ impl Input {
         } else if self.cursor.1 > 0 {
             let prev_line = lines.remove(self.cursor.1);
             self.cursor.1 -= 1;
-            self.cursor.0 = lines[self.cursor.1].chars().count();
-            lines[self.cursor.1].push_str(&prev_line);
+            self.cursor.0 = lines[self.cursor.1].count();
+            lines[self.cursor.1].push_str(prev_line.content());
         }
 
-        if lines.len() == 1 && lines[0].is_empty() {
+        if lines.len() == 1 && lines[0].content().is_empty() {
             self.visible_placeholder = true;
         }
     }
