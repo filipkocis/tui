@@ -26,7 +26,7 @@ impl Tabs {
             .enumerate()
             .map(|(i, (label, _))| (i, label.len()))
             .collect::<Vec<_>>();
-        let get_content = move |default: usize| -> (Text, u16) {
+        let build_line_text = move |default: usize| -> (Text, u16) {
             // TODO: use Border options struct when implemented
             let to_right = '╰';
             let to_left = '╯';
@@ -63,7 +63,7 @@ impl Tabs {
         let mut bottom_line = Node::default();
         let mut tabs = Node::default();
 
-        let (text, size) = get_content(default);
+        let (text, size) = build_line_text(default);
         bottom_line.text = text;
         bottom_line.style.offset = Offset::Translate(0, -1);
         bottom_line.style.size = Size::new(SizeValue::cells(size), SizeValue::cells(1));
@@ -80,12 +80,12 @@ impl Tabs {
 
             let mut on_select = on_select.clone();
             let bottom_line_weak = bottom_line_weak.clone();
-            let get_content = get_content.clone();
+            let build_line_text = build_line_text.clone();
 
             let on_click = Box::new(move |_, _: &mut _| {
                 if let Some(line) = bottom_line_weak.upgrade() {
                     let mut line = line.borrow_mut();
-                    let (text, size) = get_content(i);
+                    let (text, size) = build_line_text(i);
                     line.text = text;
                     line.style.size.width = SizeValue::cells(size);
                 }
