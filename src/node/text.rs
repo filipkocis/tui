@@ -54,14 +54,111 @@ impl Text {
 
         Self {
             input,
-            style: Vec::new(),
-            processed: Vec::new(),
-            finalized: Vec::new(),
-            // original_size,
-            processed_size: (0, 0),
+            visual: Vec::new(),
+            styles: Vec::new(),
             wrap: TextWrap::default(),
             cursor: None,
         }
+    }
+
+    /// Wraps the visual text to the specified width. Must be called after `prepare_text`, calling
+    /// this function multiple times will not have the desired effect.
+    ///
+    /// Returns the number of lines that were added due to wrapping.
+    pub fn wrap_text(&mut self, width: u16) -> usize {
+        let mut unwrapped_lines = Vec::new();
+        let mut current_line = None;
+
+        for line in self.visual.drain(..) {
+            if line.offset == 0 {
+                // If we have a line, push it
+                if let Some(current) = current_line.take() {
+                    unwrapped_lines.push(current);
+                }
+
+                // Start a new line
+                current_line = Some(line);
+                continue;
+            }
+
+            if let Some(current) = &mut current_line {
+                // If we have a current line, append to it
+                current.content.extend(line.content);
+            } else {
+                // If we don't have a current line, start a new one
+                current_line = Some(line);
+            }
+
+            // TODO: implement code purging
+            // line.purge();
+        }
+
+        // If we have a current line, push it
+        if let Some(current) = current_line {
+            unwrapped_lines.push(current);
+        }
+
+        let unwrapped_len = self.visual.len();
+
+        self.visual = unwrapped_lines
+            .into_iter()
+            .flat_map(|line| line.into_wrapped(width))
+            .collect();
+
+        self.visual.len() - unwrapped_len
+    }
+
+    /// Process the text and apply styles
+    /// Height will be clamped to the terminal size.
+    pub fn prepare_text(&mut self, height: u16) {
+        let skip = 0; // TODO: skip lines based on cursor position or other criteria
+        let mut visual_lines = Vec::new();
+        let terminal_height = crossterm::terminal::size().map_or(height, |(_, h)| h);
+        let height = height.min(terminal_height);
+
+        // Sort styles
+        self.sort_styles();
+        let mut styles = self.styles.iter().peekable();
+
+        for (line_index, line) in self
+            .input
+            .iter()
+            .enumerate()
+            .skip(skip)
+            .take(height as usize)
+        {
+            let grapheme_count = line.count();
+            let mut visual_line = VisualLine::from_buffer_line(line, line_index);
+
+            loop {
+                // Skip styles that are no longer applicable
+                if styles.peek().map_or(false, |s| s.line < line_index) {
+                    styles.next();
+                    continue;
+                }
+
+                // Break if the are no more styles for this line
+                if styles.peek().map_or(false, |s| s.line > line_index) {
+                    break;
+                }
+
+                let Some(style) = styles.next() else {
+                    break;
+                };
+
+                // If the style starts after the line ends, skip it
+                if style.character >= grapheme_count {
+                    continue;
+                }
+
+                visual_line.add_style(style.code, style.character, style.length);
+            }
+
+            visual_lines.push(visual_line);
+        }
+
+        self.visual = visual_lines;
+        self.sanitize();
     }
 
     /// Creates a text object from a string
@@ -77,7 +174,8 @@ impl Text {
 
         let mut text = Self::new_from(lines);
 
-        text.process_text();
+        // text.process_text();
+        text.prepare_text(u16::MAX);
         text
     }
 
@@ -95,147 +193,6 @@ impl Text {
             .map_err(|_| Error::new(ErrorKind::Other, "Failed to read file"))?;
 
         Ok(Self::plain(&content))
-    }
-
-    /// Process the text and apply styles
-    pub fn process_text(&mut self) {
-        let mut processed = Vec::new();
-
-        // let mut codes = self.style.iter();
-        // let mut current_code = codes.next();
-        let mut current_code_index = 0;
-        let mut current_index = 0;
-
-        for line in &self.input {
-            let mut large_code_span_index = None;
-            let mut processed_line = Line::from_string(line.content());
-            let line_len = processed_line.len();
-            let line_end_index = current_index + line_len;
-
-            while let Some(code) = self.style.get(current_code_index) {
-                debug_assert!(
-                    code.end >= code.start,
-                    "Code end must be greater than or equal to start"
-                );
-
-                if code.end < current_index {
-                    // Skip codes that are already processe
-                    current_code_index += 1;
-                    continue;
-                }
-
-                if code.start >= line_end_index {
-                    // Break if code isn't active yet
-                    break;
-                } else {
-                    // Activate the code, it's either active for this line, or since previous lines
-                    let index = code.start.saturating_sub(current_index);
-                    processed_line.set(index, Char::Code(code.code));
-                }
-
-                if code.end <= line_end_index {
-                    // Deactivate the code, it has ended on this line
-                    let reset_code = Char::Code(code.code.into_reset());
-                    if code.end == line_end_index {
-                        processed_line.chars.push(reset_code);
-                    } else {
-                        processed_line.set(code.end - current_index, reset_code);
-                    }
-                } else {
-                    // The code is active for more lines, so we reset this line's end
-                    processed_line
-                        .chars
-                        .push(Char::Code(code.code.into_reset()));
-                    // Store the first idnex of a code that spans multiple lines
-                    if large_code_span_index.is_none() {
-                        large_code_span_index = Some(current_code_index);
-                    }
-                }
-
-                // Move to the next code
-                current_code_index += 1;
-            }
-
-            if let Some(index) = large_code_span_index {
-                // Move code index back to the last code index which spans multiple lines
-                current_code_index = index;
-            }
-
-            processed.push(processed_line);
-            current_index += line_len + 1; // +1 for the newline character
-        }
-
-        self.processed = processed;
-        self.sanitize();
-
-        self.processed_size = (
-            self.processed.iter().map(|l| l.len()).max().unwrap_or(0),
-            self.processed.len(),
-        );
-    }
-
-    /// Finalize the text, apply wrapping and other operations
-    pub fn finalize_text(&mut self, max_width: u16) {
-        if self.wrap == TextWrap::None || self.get_processed_size().0 <= max_width {
-            // No need for wrapping
-            self.finalized = self.processed.clone();
-            return;
-        }
-
-        if self.wrap == TextWrap::All {
-            let mut finalized = Vec::new();
-
-            for line in &self.processed {
-                let line_len = line.len();
-                let parts = (line_len as f32 / max_width.max(1) as f32).ceil() as usize;
-
-                if parts <= 1 {
-                    finalized.push(line.clone());
-                    continue;
-                }
-
-                if max_width == 0 {
-                    for _ in 0..parts {
-                        finalized.push(Line::new(0));
-                    }
-                    continue;
-                }
-
-                let mut start = 0;
-                let mut end = max_width as usize;
-                for _ in 0..parts {
-                    if end > line_len {
-                        end = line_len;
-                    }
-
-                    let cutout = line.cutout(start, end);
-                    finalized.push(cutout);
-
-                    start = end;
-                    end += max_width as usize;
-
-                    if start >= line_len {
-                        break;
-                    }
-                }
-            }
-
-            self.finalized = finalized;
-        }
-
-        if self.wrap == TextWrap::Word {
-            // TODO: word wrap
-            unimplemented!("word wrap");
-
-            // let mut finalized = Vec::new();
-            //
-            // for line in &self.processed {
-            //     let mut start = 0;
-            //     let mut end = max_width as usize;
-            // }
-            //
-            // self.finalized = finalized
-        }
     }
 
     /// Sanitizes the visual text
