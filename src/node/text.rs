@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use unicode_segmentation::{GraphemeIndices, Graphemes, UnicodeSegmentation};
-use unicode_width::UnicodeWidthStr;
-
-use crate::{Char, Code, Line};
+use crate::{
+    text::{BufferLine, StyleSpan, StyledUnit, VisualGrapheme, VisualLine},
+    Code,
+};
 
 #[derive(Debug)]
 /// Defines a style for a text span from start (inclusive) to end (exclusive)
@@ -37,21 +37,10 @@ pub enum TextWrap {
 pub struct Text {
     /// Text content, source of truth
     pub input: Vec<BufferLine>,
-    /// Color and attribute commands
-    pub style: Vec<CodeSpan>,
+    pub visual: Vec<VisualLine>,
+    pub styles: Vec<StyleSpan>,
     /// Text wrapping style
     pub wrap: TextWrap,
-
-    /// Text with applied styles and sanitization
-    pub processed: Vec<Line>,
-    /// Visible and wrapped text
-    pub finalized: Vec<Line>,
-
-    // /// Size of the orignal text (width, height)
-    // pub original_size: (usize, usize),
-    /// Size of the processed text
-    pub processed_size: (usize, usize),
-
     /// Cursor position in the text, used for rendering
     pub cursor: Option<(u16, u16)>,
 }
@@ -270,40 +259,30 @@ impl Text {
     }
 
     /// Sort styles by index
-    pub fn sort_style(&mut self) {
-        self.style.sort_by(|a, b| {
-            if a.start == b.start {
-                a.end.cmp(&b.end)
+    pub fn sort_styles(&mut self) {
+        self.styles.sort_by(|a, b| {
+            let line_cmp = a.line.cmp(&b.line);
+            if line_cmp.is_eq() {
+                a.character.cmp(&b.character)
             } else {
-                a.start.cmp(&b.start)
+                line_cmp
             }
         });
     }
 
     /// Adds new style to the existing one, re-processes text
-    pub fn add_style(&mut self, style: Vec<CodeSpan>) {
-        self.style.extend(style);
-        self.sort_style();
-        self.process_text();
+    pub fn add_styles(&mut self, style: Vec<StyleSpan>) {
+        self.styles.extend(style);
+        self.prepare_text(u16::MAX);
     }
 
-    /// Sets new style, re-processes text
-    pub fn set_style(&mut self, style: Vec<CodeSpan>) {
-        // TODO: flatten, prune and sort the styles
-        self.style = style;
-        self.sort_style();
-        self.process_text();
-    }
-
-    /// Get the current style
-    pub fn style(&self) -> &[CodeSpan] {
-        &self.style
-    }
-
-    /// Returns processed text size `(width, height)` bound to terminal size.
-    pub fn get_processed_size(&self) -> (u16, u16) {
-        let (width, height) = self.processed_size;
+    /// Returns visual text size `(width, height)` bound to terminal size.
+    /// Height is the number of visual lines, width is the maximum column width of the lines.
+    pub fn get_visual_size(&self) -> (u16, u16) {
         let (cols, rows) = crossterm::terminal::size().unwrap_or_default();
+
+        let width = self.visual.iter().map(|l| l.width()).max().unwrap_or(0);
+        let height = self.visual.len();
 
         let width = width.min(cols as usize) as u16;
         let height = height.min(rows as usize) as u16;
