@@ -75,10 +75,10 @@ impl Canvas {
             return;
         }
 
-        // TODO: Have finalized be just for the viewport
-        for line in &text.finalized {
+        for line in &text.visual {
             // let line = line.cutout(0, width);
             let line = line.clone();
+            let line = line.debug_transform_into_line();
             // if self.buffer.len() < height {
             self.buffer.push(line);
             // }
