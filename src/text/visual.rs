@@ -17,13 +17,13 @@ pub struct StyleSpan {
 #[derive(Debug, Clone)]
 pub struct VisualGrapheme {
     /// The grapheme as a string, can be a normal string but needs to have a valid width
-    str: String,
+    pub str: String,
     /// The visual width of the grapheme in columns
-    width: usize,
+    pub width: usize,
     /// This grapheme's grapheme index in the original line. Used in conjunction with
     /// `line_index` from [`VisualLine`].
     /// It will be `None` if the grapheme is not a part of the original line.
-    grapheme_index: Option<usize>,
+    pub grapheme_index: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -34,11 +34,11 @@ pub enum StyledUnit {
 
 #[derive(Debug, Clone)]
 pub struct VisualLine {
-    content: Vec<StyledUnit>,
+    pub content: Vec<StyledUnit>,
     /// The original line index in the text
-    line_index: usize,
+    pub line_index: usize,
     /// Grapheme offset in the original line
-    offset: usize,
+    pub offset: usize,
 }
 
 impl StyleSpan {
