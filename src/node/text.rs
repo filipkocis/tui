@@ -238,11 +238,15 @@ impl Text {
         }
     }
 
-    /// Sanitizes the processed text
+    /// Sanitizes the visual text
     pub fn sanitize(&mut self) {
-        for line in &mut self.processed {
-            for i in (0..line.chars.len()).rev() {
-                let Char::Char(char) = line.chars[i] else {
+        for line in &mut self.visual {
+            for i in (0..line.content.len()).rev() {
+                let StyledUnit::Grapheme(grapheme) = &line.content[i] else {
+                    continue;
+                };
+
+                let Some(char) = grapheme.str.chars().next() else {
                     continue;
                 };
 
@@ -252,8 +256,12 @@ impl Text {
                     _ => continue,
                 };
 
-                line.chars[i] = Char::Char(char_b);
-                line.chars.insert(i, Char::Char(char_a));
+                let grapheme_index = grapheme.grapheme_index;
+                let grapheme_a = VisualGrapheme::new(char_a.to_string(), 1, grapheme_index);
+                let grapheme_b = VisualGrapheme::new(char_b.to_string(), 1, grapheme_index);
+
+                line.content[i] = StyledUnit::Grapheme(grapheme_b);
+                line.content.insert(i, StyledUnit::Grapheme(grapheme_a));
             }
         }
     }
