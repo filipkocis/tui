@@ -188,16 +188,17 @@ impl Node {
     /// Clamps the size
     pub fn calculate_percentage_size(&mut self, parent_available_size: Size) {
         // Calculate the size of this node
-        let (text_width, text_height) = self
+        self
             .style
             .compute_percentage_size(parent_available_size, &mut self.text);
 
         // Calculate the available content size of tis node
         let available_content_size = self.available_content_size();
 
-        // Either max_size or total_size depending on flex direction
-        // let mut width = self.style.size.width.computed_size();
-        // let mut height = self.style.size.height.computed_size();
+        // Text size is used only for auto-size calculation
+        let (text_width, text_height) = self.text.get_visual_size();
+
+        // Either max_size or total_size depending on flex direction, for auto-size calculation
         let mut width = text_width;
         let mut height = 0;
 

@@ -63,12 +63,7 @@ impl Style {
     const DEFAULT_MAX_SIZE: (u16, u16) = (u16::MAX, u16::MAX);
 
     /// Calculates percentage sizes, applies clamping, and calculates wrapped text height (if auto)
-    ///
-    /// # Note
-    /// For the time being, this function returns text's width and height, later it should be
-    /// calculated inside a Text struct and stored inside of it, this function should not calculate
-    /// the text and return the result. Result is only for auto sizes
-    pub fn compute_percentage_size(&mut self, parent_size: Size, text: &mut Text) -> (u16, u16) {
+    pub fn compute_percentage_size(&mut self, parent_size: Size, text: &mut Text) {
         // Calc min max
         self.min_size = self
             .min_size
@@ -100,15 +95,11 @@ impl Style {
 
         // Finalize and wrap text
         let self_width = self.size.width.computed_size();
-        text.finalize_text(self_width);
+        let line_wrap_len_diff = text.wrap_text(self_width);
 
         // Recalculate height with wrapped text height, if height is auto
         if self.size.height.is_auto() {
-            // TODO: this does not work correctly for large text, or text larger than screen
-            let (processed_text_width, processed_text_height) = text.get_processed_size();
-
-            let wrapped_text_height = text.finalized.len() as u16;
-            let text_height_diff = wrapped_text_height - processed_text_height; // TODO: add saturating sub here when finalized is clamped to viewport
+            let text_height_diff = line_wrap_len_diff.min(u16::MAX as usize) as u16;
 
             // Add text height wrap difference to the current size
             let height = self.size.height.computed_size();
@@ -122,12 +113,7 @@ impl Style {
                 .size
                 .height
                 .clamp_computed_size(self.min_size.height, self.max_size.height);
-
-            let wrapped_text_width = processed_text_width.min(self_width);
-            return (wrapped_text_width, wrapped_text_height);
         }
-
-        return (0, 0);
     }
 
     /// Calculates auto (for text) and intrinsic sizes
@@ -150,7 +136,7 @@ impl Style {
         } = self.size.compute_size(parent_size, (0, 0));
 
         // Get text dimensions
-        let (text_width, text_height) = text.get_processed_size();
+        let (text_width, text_height) = text.get_visual_size();
 
         // Set to intrinsic text size if auto size
         if width.is_auto() {
