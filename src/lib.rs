@@ -7,6 +7,7 @@ mod hitmap;
 mod line;
 mod node;
 mod style;
+pub mod text;
 mod viewport;
 
 pub use canvas::Canvas;
@@ -16,7 +17,7 @@ pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use hitmap::HitMap;
 pub use line::Line;
-pub use node::{text, Node, NodeHandle, NodeId, WeakNodeHandle};
+pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle};
 pub use style::{Offset, Padding, Size, SizeValue, Style};
 pub use viewport::Viewport;
 

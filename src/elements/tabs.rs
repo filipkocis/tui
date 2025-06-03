@@ -1,7 +1,7 @@
 use crossterm::style::Color;
 
 use crate::{
-    text::{CodeSpan, Text},
+    text::{CodeSpan, StyleSpan, Text},
     Code, Node, NodeHandle, Offset, Padding, Size, SizeValue,
 };
 
@@ -48,13 +48,15 @@ impl Tabs {
             }
 
             let mut text = Text::plain(&line);
-            let len = text.get_processed_size().0;
+            let len = text.get_visual_size().0;
 
-            text.set_style(vec![CodeSpan::new(
+            text.add_styles(vec![StyleSpan::new(
                 Code::Foreground(Self::COLOR),
+                0,
                 0,
                 len as usize,
             )]);
+            
             (text, len)
         };
 

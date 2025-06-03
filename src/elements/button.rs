@@ -44,7 +44,7 @@ impl Button {
     pub fn new(label: &str, on_click: Option<MouseClickHandler>) -> Node {
         let mut node = Node::default();
         node.text = Text::plain(label);
-        let width = node.text.get_processed_size().0;
+        let width = node.text.get_visual_size().0;
         node.style.size = Size::from_cells(width, 1);
         // node.style.grow = true;
 

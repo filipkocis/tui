@@ -163,7 +163,7 @@ impl Input {
             node.text = self.placeholder.clone().into();
             self.cursor = (0, 0);
         } else {
-            node.text.process_text();
+            node.text.prepare_text(u16::MAX);
         }
 
         node.text.cursor = Some((self.cursor.0 as u16, self.cursor.1 as u16));
