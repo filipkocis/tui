@@ -22,6 +22,12 @@ pub struct VisualGrapheme {
     grapheme_index: Option<usize>,
 }
 
+#[derive(Debug, Clone)]
+pub enum StyledUnit {
+    Grapheme(VisualGrapheme),
+    Code(Code),
+}
+
 impl StyleSpan {
     /// Creates a new style span
     pub fn new(code: Code, line: usize, character: usize, length: usize) -> Self {
@@ -42,5 +48,21 @@ impl VisualGrapheme {
             width,
             grapheme_index: index,
         }
+    }
+}
+
+impl StyledUnit {
+    /// Returns the width of the styled unit
+    pub fn width(&self) -> usize {
+        match self {
+            StyledUnit::Grapheme(g) => g.width,
+            StyledUnit::Code(_) => 0, // Codes have no visual width
+        }
+    }
+
+    /// Returns if the styled unit is a `Grapheme` variant
+    #[inline]
+    pub fn is_grapheme(&self) -> bool {
+        matches!(self, StyledUnit::Grapheme(_))
     }
 }
