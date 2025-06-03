@@ -1,3 +1,6 @@
+use unicode_segmentation::{GraphemeIndices, Graphemes, UnicodeSegmentation};
+use unicode_width::UnicodeWidthStr;
+
 #[derive(Debug, Clone, Default)]
 /// A line in the text buffer
 pub struct BufferLine {
