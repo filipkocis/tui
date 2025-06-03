@@ -108,7 +108,7 @@ impl Text {
         self.visual.len() - unwrapped_len
     }
 
-    /// Process the text and apply styles
+    /// Prepares the text and apply styles
     /// Height will be clamped to the terminal size.
     pub fn prepare_text(&mut self, height: u16) {
         let skip = 0; // TODO: skip lines based on cursor position or other criteria
@@ -174,7 +174,6 @@ impl Text {
 
         let mut text = Self::new_from(lines);
 
-        // text.process_text();
         text.prepare_text(u16::MAX);
         text
     }
@@ -235,7 +234,7 @@ impl Text {
         });
     }
 
-    /// Adds new style to the existing one, re-processes text
+    /// Adds new styles to the existing one, re-prepares text
     pub fn add_styles(&mut self, style: Vec<StyleSpan>) {
         self.styles.extend(style);
         self.prepare_text(u16::MAX);

@@ -5,6 +5,7 @@ use crossterm::{
     style::{self, Color},
     QueueableCommand,
 };
+use unicode_width::UnicodeWidthChar;
 
 use crate::{text::Text, Char, Code, Line, Padding, Size, Style, Viewport};
 
@@ -284,9 +285,22 @@ impl Canvas {
                 continue;
             }
 
-            let print = style::Print(line);
-            let goto = cursor::MoveTo(self.position.0 as u16, y as u16);
-            stdout.queue(goto)?.queue(print)?;
+            let mut x = self.position.0 as u16;
+            stdout.queue(cursor::MoveTo(x, y as u16))?;
+
+            for char in &line.chars {
+                match char {
+                    Char::Char(c) => {
+                        stdout
+                            .queue(cursor::MoveToColumn(x))?
+                            .queue(style::Print(c))?;
+                        x += c.width().unwrap() as u16;
+                    }
+                    Char::Code(code) => {
+                        stdout.queue(style::Print(code))?;
+                    }
+                };
+            }
         }
 
         stdout.queue(cursor::Show)?;
