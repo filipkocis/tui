@@ -1,7 +1,7 @@
 use crossterm::style::Color;
 
 use crate::{
-    text::{CodeSpan, StyleSpan, Text},
+    text::{StyleSpan, Text},
     Code, Node, NodeHandle, Offset, Padding, Size, SizeValue,
 };
 
@@ -56,7 +56,7 @@ impl Tabs {
                 0,
                 len as usize,
             )]);
-            
+
             (text, len)
         };
 

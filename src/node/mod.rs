@@ -2,12 +2,12 @@ mod handle;
 pub mod text;
 
 pub use handle::{NodeHandle, WeakNodeHandle};
-use text::Text;
 
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
+    text::Text, Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style,
+    Viewport,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -188,8 +188,7 @@ impl Node {
     /// Clamps the size
     pub fn calculate_percentage_size(&mut self, parent_available_size: Size) {
         // Calculate the size of this node
-        self
-            .style
+        self.style
             .compute_percentage_size(parent_available_size, &mut self.text);
 
         // Calculate the available content size of tis node
