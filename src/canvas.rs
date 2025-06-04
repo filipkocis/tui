@@ -43,7 +43,7 @@ impl Canvas {
 
     /// Get the width of the canvas (column width)
     pub fn width(&self) -> usize {
-        self.buffer.iter().map(|line| line.width()).max().unwrap_or(0)
+        self.buffer.iter().map(|l| l.width()).max().unwrap_or(0)
     }
 
     /// Get the height of the canvas
@@ -335,7 +335,7 @@ impl Canvas {
 
         let start = (viewport.min.0 as i16 - x).max(0) as usize;
         let take = viewport.max.0.saturating_sub(viewport.min.0) as usize;
-        let line = line.cutout(start, start + take);
+        let line = line.cutout(start, take);
 
         self.buffer[y as usize].paste_on_top(&line, x.max(0) as usize);
     }
