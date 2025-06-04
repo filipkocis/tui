@@ -1,3 +1,5 @@
+use unicode_width::UnicodeWidthStr;
+
 use crate::{Char, Code, Line};
 
 use super::BufferLine;
@@ -14,7 +16,7 @@ pub struct StyleSpan {
     pub length: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VisualGrapheme {
     /// The grapheme as a string, can be a normal string but needs to have a valid width
     pub str: String,
@@ -26,7 +28,7 @@ pub struct VisualGrapheme {
     pub grapheme_index: Option<usize>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum StyledUnit {
     Grapheme(VisualGrapheme),
     Code(Code),
@@ -78,23 +80,21 @@ impl StyledUnit {
     pub fn is_grapheme(&self) -> bool {
         matches!(self, StyledUnit::Grapheme(_))
     }
+
+    /// Returns if the styled unit is a `Code` variant
+    #[inline]
+    pub fn is_code(&self) -> bool {
+        matches!(self, StyledUnit::Code(_))
+    }
+
+    /// Returns a grapheme created from a string, string must be a valid grapheme
+    #[inline]
+    pub fn grapheme(str: &str) -> Self {
+        StyledUnit::Grapheme(VisualGrapheme::new(str.to_string(), str.width(), None))
+    }
 }
 
 impl VisualLine {
-    /// TODO: remove this later
-    pub fn debug_transform_into_line(self) -> Line {
-        let mut chars = Vec::new();
-        for unit in self.content.into_iter() {
-            match unit {
-                StyledUnit::Grapheme(g) => {
-                    chars.push(Char::Char(g.str.chars().next().unwrap_or(' ')))
-                }
-                StyledUnit::Code(code) => chars.push(Char::Code(code)),
-            }
-        }
-        Line { chars }
-    }
-
     pub fn from_buffer_line(line: &BufferLine, line_index: usize) -> Self {
         let mut content = Vec::new();
 
