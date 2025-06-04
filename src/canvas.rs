@@ -5,9 +5,11 @@ use crossterm::{
     style::{self, Color},
     QueueableCommand,
 };
-use unicode_width::UnicodeWidthChar;
 
-use crate::{text::Text, Char, Code, Line, Padding, Size, Style, Viewport};
+use crate::{
+    text::{StyledUnit, Text},
+    Code, Line, Padding, Size, Style, Viewport,
+};
 
 #[derive(Debug, Default)]
 pub struct Canvas {
@@ -39,9 +41,9 @@ impl Canvas {
             && y < self.position.1 + self.height() as i16
     }
 
-    /// Get the width of the canvas
+    /// Get the width of the canvas (column width)
     pub fn width(&self) -> usize {
-        self.buffer.iter().map(|line| line.len()).max().unwrap_or(0)
+        self.buffer.iter().map(|line| line.width()).max().unwrap_or(0)
     }
 
     /// Get the height of the canvas
@@ -77,8 +79,9 @@ impl Canvas {
 
         for line in &text.visual {
             // let line = line.cutout(0, width);
-            let line = line.clone();
-            let line = line.debug_transform_into_line();
+            let line = Line {
+                content: line.content.clone(),
+            };
             // if self.buffer.len() < height {
             self.buffer.push(line);
             // }
@@ -92,8 +95,9 @@ impl Canvas {
         };
 
         for line in &mut self.buffer {
-            line.set(0, Char::Code(Code::Background(color)));
-            line.chars.push(Char::Code(Code::Background(Color::Reset)));
+            line.set(0, StyledUnit::Code(Code::Background(color)));
+            line.content
+                .push(StyledUnit::Code(Code::Background(Color::Reset)));
         }
     }
 
@@ -104,8 +108,9 @@ impl Canvas {
         };
 
         for line in &mut self.buffer {
-            line.set(0, Char::Code(Code::Foreground(color)));
-            line.chars.push(Char::Code(Code::Foreground(Color::Reset)));
+            line.set(0, StyledUnit::Code(Code::Foreground(color)));
+            line.content
+                .push(StyledUnit::Code(Code::Foreground(Color::Reset)));
         }
     }
 
@@ -127,11 +132,11 @@ impl Canvas {
 
         for line in &mut self.buffer {
             for _ in 0..left {
-                line.chars.insert(0, Char::Char(' '));
+                line.content.insert(0, StyledUnit::grapheme(" "));
             }
 
             for _ in 0..right {
-                line.chars.push(Char::Char(' '));
+                line.content.push(StyledUnit::grapheme(" "));
             }
         }
     }
@@ -144,40 +149,40 @@ impl Canvas {
         let has_right = border.3;
 
         let border_color = border.4;
-        let fg_reset_code = Char::Code(Code::Foreground(Color::Reset));
+        let fg_reset_code = StyledUnit::Code(Code::Foreground(Color::Reset));
 
-        let style_top = Char::Char('─');
-        let style_bottom = Char::Char('─');
-        let style_left = Char::Char('│');
-        let style_right = Char::Char('│');
+        let style_top = StyledUnit::grapheme("─");
+        let style_bottom = StyledUnit::grapheme("─");
+        let style_left = StyledUnit::grapheme("│");
+        let style_right = StyledUnit::grapheme("│");
 
-        let top_left = Char::Char('╭');
-        let top_right = Char::Char('╮');
-        let bottom_left = Char::Char('╰');
-        let bottom_right = Char::Char('╯');
+        let top_left = StyledUnit::grapheme("╭");
+        let top_right = StyledUnit::grapheme("╮");
+        let bottom_left = StyledUnit::grapheme("╰");
+        let bottom_right = StyledUnit::grapheme("╯");
 
-        let chars_len = if self.buffer.len() > 0 {
-            self.buffer[0].len()
+        let chars_width = if self.buffer.len() > 0 {
+            self.buffer[0].width()
         } else {
             0
         };
 
         if has_top {
-            let mut chars = vec![style_top; chars_len];
+            let mut content = vec![style_top; chars_width];
             if let Some(color) = border_color {
-                chars.insert(0, Char::Code(Code::Foreground(color)));
-                chars.push(fg_reset_code);
+                content.insert(0, StyledUnit::Code(Code::Foreground(color)));
+                content.push(fg_reset_code.clone());
             }
-            self.buffer.insert(0, Line { chars });
+            self.buffer.insert(0, Line { content });
         }
 
         if has_bottom {
-            let mut chars = vec![style_bottom; chars_len];
+            let mut content = vec![style_bottom; chars_width];
             if let Some(color) = border_color {
-                chars.insert(0, Char::Code(Code::Foreground(color)));
-                chars.push(fg_reset_code);
+                content.insert(0, StyledUnit::Code(Code::Foreground(color)));
+                content.push(fg_reset_code.clone());
             }
-            self.buffer.push(Line { chars });
+            self.buffer.push(Line { content });
         }
 
         let lines = self.buffer.len();
@@ -185,36 +190,37 @@ impl Canvas {
             let first_char_index = border_color.is_some() as usize; // 0 has color code
             for (i, line) in self.buffer.iter_mut().enumerate() {
                 if i == 0 && has_top {
-                    line.chars.insert(first_char_index, top_left);
+                    line.content.insert(first_char_index, top_left.clone());
                 } else if i == lines - 1 && has_bottom {
-                    line.chars.insert(first_char_index, bottom_left);
+                    line.content.insert(first_char_index, bottom_left.clone());
                 } else {
                     if let Some(color) = border_color {
-                        line.chars.insert(0, fg_reset_code);
-                        line.chars.insert(0, style_left);
-                        line.chars.insert(0, Char::Code(Code::Foreground(color)));
+                        line.content.insert(0, fg_reset_code.clone());
+                        line.content.insert(0, style_left.clone());
+                        line.content
+                            .insert(0, StyledUnit::Code(Code::Foreground(color)));
                     } else {
-                        line.chars.insert(0, style_left);
+                        line.content.insert(0, style_left.clone());
                     }
                 }
             }
         }
 
         if has_right {
-            let real_len = self.buffer.get(0).map(|l| l.chars.len()).unwrap_or(0);
+            let real_len = self.buffer.get(0).map(|l| l.content.len()).unwrap_or(0);
             let last_char_index = real_len - border_color.is_some() as usize; // real_len is reset code
             for (i, line) in self.buffer.iter_mut().enumerate() {
                 if i == 0 && has_top {
-                    line.chars.insert(last_char_index, top_right);
+                    line.content.insert(last_char_index, top_right.clone());
                 } else if i == lines - 1 && has_bottom {
-                    line.chars.insert(last_char_index, bottom_right);
+                    line.content.insert(last_char_index, bottom_right.clone());
                 } else {
                     if let Some(color) = border_color {
-                        line.chars.push(Char::Code(Code::Foreground(color)));
-                        line.chars.push(style_right);
-                        line.chars.push(fg_reset_code);
+                        line.content.push(StyledUnit::Code(Code::Foreground(color)));
+                        line.content.push(style_right.clone());
+                        line.content.push(fg_reset_code.clone());
                     } else {
-                        line.chars.push(style_right);
+                        line.content.push(style_right.clone());
                     }
                 }
             }
@@ -255,7 +261,7 @@ impl Canvas {
                     }
 
                     let line = &mut self.buffer[i];
-                    line.chars.extend(blank_line.chars);
+                    line.content.extend(blank_line.content);
                 }
             }
         } else {
@@ -285,18 +291,15 @@ impl Canvas {
                 continue;
             }
 
-            let mut x = self.position.0 as u16;
+            let x = self.position.0 as u16;
             stdout.queue(cursor::MoveTo(x, y as u16))?;
 
-            for char in &line.chars {
-                match char {
-                    Char::Char(c) => {
-                        stdout
-                            .queue(cursor::MoveToColumn(x))?
-                            .queue(style::Print(c))?;
-                        x += c.width().unwrap() as u16;
+            for unit in &line.content {
+                match unit {
+                    StyledUnit::Grapheme(g) => {
+                        stdout.queue(style::Print(&g.str))?;
                     }
-                    Char::Code(code) => {
+                    StyledUnit::Code(code) => {
                         stdout.queue(style::Print(code))?;
                     }
                 };
@@ -354,43 +357,45 @@ mod canvas {
         Canvas::new(w, h)
     }
 
-    fn line_ch<const N: usize>(v: [char; N]) -> Line {
+    fn line_ch(s: &str, n: usize) -> Line {
         Line {
-            chars: v.map(Char::Char).to_vec(),
+            content: (0..n).map(|_| StyledUnit::grapheme(s)).collect(),
         }
     }
 
-    fn line<const N: usize>(v: [Char; N]) -> Line {
-        Line { chars: v.to_vec() }
+    fn line(v: StyledUnit, n: usize) -> Line {
+        Line {
+            content: (0..n).map(|_| v.clone()).collect(),
+        }
     }
 
     #[test]
     fn paste_eq_len_no_col() {
         let vp = Viewport::new();
         let mut canvas = canvas(10, 10);
-        let line = line([Char::Char('a'); 10]);
+        let line = line_ch("a", 10);
 
         canvas.paste_on_top(&line, (0, 0), &vp);
 
-        assert_eq!(line.chars.len(), 10);
+        assert_eq!(line.content.len(), 10);
         assert_eq!(canvas.width(), 10);
 
-        assert_eq!(canvas.buffer[0].chars, line.chars);
+        assert_eq!(canvas.buffer[0].content, line.content);
     }
 
     #[test]
     fn paste_eq_start_no_col() {
         let vp = Viewport::new();
         let mut canvas = canvas(10, 2);
-        let line = line([Char::Char('a'); 5]);
+        let line = line_ch("a", 5);
 
         canvas.paste_on_top(&line, (0, 0), &vp);
 
-        assert_eq!(line.chars.len(), 5);
+        assert_eq!(line.content.len(), 5);
         assert_eq!(canvas.width(), 10);
 
-        assert_eq!(canvas.buffer[0].chars[0..5], line.chars);
-        assert_eq!(canvas.buffer[0].chars[5..], [Char::Char(' '); 5]);
+        assert_eq!(canvas.buffer[0].content[0..5], line.content);
+        assert_eq!(canvas.buffer[0].content[5..], line_ch(" ", 5).content);
     }
 
     #[test]
@@ -399,39 +404,63 @@ mod canvas {
         let mut canvas = canvas(5, 1);
         // canvas.buffer[0] = line_ch(['a', 'b', 'c', 'd', 'e']);
 
-        let empty = Char::Char(' ');
-        let letter = Char::Char('T');
-        let mut line = line([letter]);
+        let empty = StyledUnit::grapheme(" ");
+        let letter = StyledUnit::grapheme("T");
+        let mut line = line(letter.clone(), 1);
 
-        let code = Char::Code(Code::Foreground(Color::Red));
-        let ext = Char::Code(Code::Foreground(Color::Reset));
-        line.set(0, code);
+        let code = StyledUnit::Code(Code::Foreground(Color::Red));
+        let ext = StyledUnit::Code(Code::Foreground(Color::Reset));
+        line.set(0, code.clone());
 
         canvas.paste_on_top(&line, (2, 0), &vp);
 
-        assert_eq!(line.chars, [code, letter]);
+        assert_eq!(line.content, [code.clone(), letter.clone()]);
         assert_eq!(
-            canvas.buffer[0].chars,
-            [empty, empty, code, letter, ext, empty, empty]
+            canvas.buffer[0].content,
+            [
+                empty.clone(),
+                empty.clone(),
+                code.clone(),
+                letter.clone(),
+                ext.clone(),
+                empty.clone(),
+                empty.clone()
+            ]
         );
 
         canvas.paste_on_top(&line, (2, 0), &vp);
-        assert_eq!(line.chars, [code, letter]);
+        assert_eq!(line.content, [code.clone(), letter.clone()]);
         assert_ne!(
-            canvas.buffer[0].chars,
-            [empty, empty, code, letter, ext, empty, empty]
+            canvas.buffer[0].content,
+            [
+                empty.clone(),
+                empty.clone(),
+                code.clone(),
+                letter.clone(),
+                ext.clone(),
+                empty.clone(),
+                empty.clone()
+            ]
         );
         canvas.prune_redundant_codes();
         assert_eq!(
-            canvas.buffer[0].chars,
-            [empty, empty, code, letter, ext, empty, empty]
+            canvas.buffer[0].content,
+            [
+                empty.clone(),
+                empty.clone(),
+                code.clone(),
+                letter.clone(),
+                ext.clone(),
+                empty.clone(),
+                empty.clone()
+            ]
         );
 
-        assert_eq!(line.chars.len(), 2);
-        assert_eq!(line.len(), 1);
+        assert_eq!(line.content.len(), 2);
+        assert_eq!(line.count(), 1);
 
         assert_eq!(canvas.width(), 5);
-        assert_eq!(canvas.buffer[0].chars.len(), 5 + 2);
-        assert_eq!(canvas.buffer[0].len(), 5);
+        assert_eq!(canvas.buffer[0].content.len(), 5 + 2);
+        assert_eq!(canvas.buffer[0].count(), 5);
     }
 }

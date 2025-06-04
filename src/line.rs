@@ -1,53 +1,67 @@
 use std::{collections::HashSet, fmt::Display};
 
 use crossterm::style::{Attribute, Color};
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
-use crate::{Char, Code};
+use crate::{
+    text::{StyledUnit, VisualGrapheme},
+    Code,
+};
 
 #[derive(Debug, Default, Clone)]
 pub struct Line {
-    pub chars: Vec<Char>,
+    pub content: Vec<StyledUnit>,
 }
 
 impl Line {
     /// Returns a new line with `size` empty chars
     pub fn new(size: usize) -> Self {
-        let chars = vec![Char::Char(' '); size];
-        Self { chars }
+        let content = vec![StyledUnit::grapheme(" "); size];
+        Self { content }
     }
 
     /// Returns a line built from a string
     pub fn from_string(string: &str) -> Self {
-        let chars = string.chars().map(Char::Char).collect();
-        Self { chars }
+        let content = string
+            .graphemes(true)
+            .map(|s| VisualGrapheme::new(s.to_string(), s.width(), None))
+            .map(StyledUnit::Grapheme)
+            .collect();
+        Self { content }
     }
 
-    /// Returns the `char` length of the line
-    pub fn len(&self) -> usize {
-        self.chars.iter().filter(|c| c.is_char()).count()
+    /// Returns the `grapheme` count of the line
+    pub fn count(&self) -> usize {
+        self.content.iter().filter(|c| c.is_grapheme()).count()
+    }
+
+    /// Returns the `column` width of the line
+    pub fn width(&self) -> usize {
+        self.content.iter().map(|c| c.width()).count()
     }
 
     fn real_index(&self, index: usize) -> usize {
-        let mut char_count = 0;
-        for (i, c) in self.chars.iter().enumerate() {
-            if c.is_char() {
-                if char_count == index {
+        let mut grapheme_count = 0;
+        for (i, c) in self.content.iter().enumerate() {
+            if c.is_grapheme() {
+                if grapheme_count == index {
                     return i;
                 }
-                char_count += 1;
+                grapheme_count += 1;
             }
         }
-        panic!("Index {index} {char_count} out of bounds");
+        panic!("Index {index} {grapheme_count} out of bounds");
     }
 
-    pub fn set(&mut self, index: usize, char: Char) {
+    pub fn set(&mut self, index: usize, unit: StyledUnit) {
         let real_index = self.real_index(index);
-        assert!(real_index < self.chars.len());
+        assert!(real_index < self.content.len());
 
-        if char.is_code() {
-            self.chars.insert(real_index, char);
+        if unit.is_code() {
+            self.content.insert(real_index, unit);
         } else {
-            self.chars[real_index] = char;
+            self.content[real_index] = unit;
         }
     }
 
@@ -57,9 +71,9 @@ impl Line {
         let mut bg = None;
         let mut fg = None;
 
-        for c in &self.chars[..real_index] {
-            match c {
-                Char::Code(code) => match code {
+        for unit in &self.content[..real_index] {
+            match unit {
+                StyledUnit::Code(code) => match code {
                     Code::Attribute(attr) => {
                         if *attr == Attribute::Reset {
                             codes.retain(|c| !c.is_attribute())
@@ -120,7 +134,7 @@ impl Line {
     /// The new line will keep the correct codes at the start, all of them will be reset at the
     /// end.
     pub fn cutout(&self, start: usize, end: usize) -> Line {
-        let line_len = self.len();
+        let line_len = self.count();
         let end = end.min(line_len);
         if start >= end || start as usize >= line_len {
             return Line::new(0);
@@ -129,20 +143,26 @@ impl Line {
         let real_start = self.real_index(start);
         let real_end = self.real_index(end - 1);
 
-        let active_codes = self.active_codes_at(real_start).into_iter().map(Char::Code);
-        let reset_codes = self.reset_codes_for(real_end).into_iter().map(Char::Code);
+        let active_codes = self
+            .active_codes_at(real_start)
+            .into_iter()
+            .map(StyledUnit::Code);
+        let reset_codes = self
+            .reset_codes_for(real_end)
+            .into_iter()
+            .map(StyledUnit::Code);
 
         let mut line = Line::new(0);
-        line.chars.extend(active_codes);
-        line.chars
-            .extend(self.chars[real_start..=real_end].iter().cloned());
-        line.chars.extend(reset_codes);
+        line.content.extend(active_codes);
+        line.content
+            .extend(self.content[real_start..=real_end].iter().cloned());
+        line.content.extend(reset_codes);
         line
     }
 
     /// Paste another line on top of this one, starting at `start`.
     pub fn paste_on_top(&mut self, other: &Line, start: usize) {
-        let other_len = other.len();
+        let other_len = other.count();
         if other_len == 0 {
             return;
         }
@@ -153,27 +173,27 @@ impl Line {
             let real_start = self.real_index(start - 1);
             let reset_codes = self.reset_codes_for(real_start);
             new_line
-                .chars
-                .extend(self.chars[..=real_start].iter().cloned());
+                .content
+                .extend(self.content[..=real_start].iter().cloned());
             new_line
-                .chars
-                .extend(reset_codes.into_iter().map(Char::Code));
+                .content
+                .extend(reset_codes.into_iter().map(StyledUnit::Code));
         }
 
-        new_line.chars.extend(other.chars.iter().cloned());
+        new_line.content.extend(other.content.iter().cloned());
 
-        if start + other_len < self.len() {
+        if start + other_len < self.count() {
             let real_end = self.real_index(start + other_len - 1);
             let active_codes = self.active_codes_at(real_end);
             new_line
-                .chars
-                .extend(active_codes.into_iter().map(Char::Code));
+                .content
+                .extend(active_codes.into_iter().map(StyledUnit::Code));
             new_line
-                .chars
-                .extend(self.chars.iter().skip(real_end + 1).cloned());
+                .content
+                .extend(self.content.iter().skip(real_end + 1).cloned());
         }
 
-        self.chars = new_line.chars;
+        self.content = new_line.content;
     }
 
     /// Prune redundant codes in the line, removing any codes with no effect, such as duplicates.
@@ -188,12 +208,12 @@ impl Line {
         let mut cur_fg = None;
         let mut cur_bg = None;
 
-        let mut chars = Vec::new();
+        let mut content = Vec::new();
 
-        for c in self.chars.drain(..) {
-            match c {
+        for unit in self.content.drain(..) {
+            match unit {
                 // Set current code, but only if its not a first code == reset code
-                Char::Code(code) => match code {
+                StyledUnit::Code(code) => match code {
                     Code::Foreground(fg) => {
                         if set_fg.is_none() && fg == Color::Reset {
                             cur_fg = None;
@@ -211,17 +231,17 @@ impl Line {
                     Code::Attribute(attr) => todo!("attr"),
                 },
                 // Consume current codes and apply them if they are different from set codes
-                Char::Char(char) => {
+                StyledUnit::Grapheme(grapheme) => {
                     if let Some(fg) = cur_fg.take() {
                         if set_fg != Some(fg) {
-                            chars.push(Char::Code(Code::Foreground(fg)));
+                            content.push(StyledUnit::Code(Code::Foreground(fg)));
                             set_fg = Some(fg);
                         }
                     }
 
                     if let Some(bg) = cur_bg.take() {
                         if set_bg != Some(bg) {
-                            chars.push(Char::Code(Code::Background(bg)));
+                            content.push(StyledUnit::Code(Code::Background(bg)));
                             set_bg = Some(bg);
                         }
                     }
@@ -230,20 +250,20 @@ impl Line {
                         todo!("attrs")
                     }
 
-                    chars.push(Char::Char(char));
+                    content.push(StyledUnit::Grapheme(grapheme));
                 }
             }
         }
 
         // Add final codes, only if they are reset codes and not first codes
-        if chars.len() != 0 {
+        if content.len() != 0 {
             let reset = Some(Color::Reset);
             if reset == cur_fg.take() && set_fg != reset && set_fg.is_some() {
-                chars.push(Char::Code(Code::Foreground(Color::Reset)));
+                content.push(StyledUnit::Code(Code::Foreground(Color::Reset)));
             }
 
             if reset == cur_bg.take() && set_bg != reset && set_bg.is_some() {
-                chars.push(Char::Code(Code::Background(Color::Reset)));
+                content.push(StyledUnit::Code(Code::Background(Color::Reset)));
             }
 
             if let Some(attrs) = cur_attrs.take() {
@@ -251,34 +271,34 @@ impl Line {
             }
         }
 
-        self.chars = chars;
-        debug_assert_eq!(self.len() == 0, self.chars.len() == 0);
+        self.content = content;
+        debug_assert_eq!(self.count() == 0, self.content.len() == 0);
     }
 
-    /// Resize the line to fit exactly `len` in chars
-    pub fn resize_to_fit(&mut self, len: usize) {
-        let mut diff = len as isize - self.len() as isize;
+    /// Resize the line to fit exactly `width` in grapheme column width.
+    pub fn resize_to_fit(&mut self, width: usize) {
+        let mut diff = width as isize - self.count() as isize;
 
         if diff < 0 {
-            // Pop `diff` chars
+            // Pop `diff` graphemes
             while diff < 0 {
-                match self.chars.pop() {
-                    Some(Char::Char(_)) => diff += 1,
-                    Some(Char::Code(_)) => continue,
+                match self.content.pop() {
+                    Some(StyledUnit::Grapheme(_)) => diff += 1,
+                    Some(StyledUnit::Code(_)) => continue,
                     None => break,
                 }
             }
 
             // Remove trailing codes
-            while self.chars.last().map_or(false, |c| c.is_code()) {
-                self.chars.pop();
+            while self.content.last().map_or(false, |c| c.is_code()) {
+                self.content.pop();
             }
         }
 
         // Add `diff` chars
         if diff > 0 {
             for _ in 0..diff {
-                self.chars.push(Char::Char(' '));
+                self.content.push(StyledUnit::grapheme(" "));
             }
         }
     }
@@ -286,10 +306,10 @@ impl Line {
 
 impl Display for Line {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for c in &self.chars {
-            match c {
-                Char::Char(c) => write!(f, "{}", c)?,
-                Char::Code(code) => code.fmt(f)?,
+        for unit in &self.content {
+            match unit {
+                StyledUnit::Grapheme(g) => write!(f, "{}", g.str)?,
+                StyledUnit::Code(code) => code.fmt(f)?,
             }
         }
         Ok(())
