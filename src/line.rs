@@ -38,25 +38,34 @@ impl Line {
 
     /// Returns the `column` width of the line
     pub fn width(&self) -> usize {
-        self.content.iter().map(|c| c.width()).count()
+        self.content.iter().map(|c| c.width()).sum()
     }
 
-    fn real_index(&self, index: usize) -> usize {
-        let mut grapheme_count = 0;
+    /// Returns the byte index of the grapheme at `column`.
+    /// The second value is the `column start` of the grapheme.
+    /// Third value is the grapheme's `width`.
+    ///
+    /// Panics if the column is out of bounds.
+    fn column_to_index(&self, column: usize) -> (usize, usize, usize) {
+        let mut columns = 0;
         for (i, c) in self.content.iter().enumerate() {
             if c.is_grapheme() {
-                if grapheme_count == index {
-                    return i;
+                let width = c.width();
+                if columns + width > column {
+                    return (i, columns, width);
                 }
-                grapheme_count += 1;
+                columns += width;
             }
         }
-        panic!("Index {index} {grapheme_count} out of bounds");
+        panic!("Column {column} out of bounds, max is {columns}");
     }
 
-    pub fn set(&mut self, index: usize, unit: StyledUnit) {
-        let real_index = self.real_index(index);
-        assert!(real_index < self.content.len());
+    /// Set a grapheme at `column` to `unit`.
+    /// If unit is a code, it will be inserted at the grapheme's index, otherwise it will replace
+    /// the grapheme.
+    pub fn set(&mut self, column: usize, unit: StyledUnit) {
+        let (real_index, ..) = self.column_to_index(column);
+        debug_assert!(real_index < self.content.len());
 
         if unit.is_code() {
             self.content.insert(real_index, unit);
@@ -130,67 +139,141 @@ impl Line {
         reset_codes
     }
 
-    /// Returns a new line with the chars between `start` and `end` (exclusive).
+    /// Returns a new line with the graphemes between `(column..column + length)` column range, if
+    /// a column is not a grapheme boundary, it will be filled with spaces.
     /// The new line will keep the correct codes at the start, all of them will be reset at the
     /// end.
-    pub fn cutout(&self, start: usize, end: usize) -> Line {
-        let line_len = self.count();
-        let end = end.min(line_len);
-        if start >= end || start as usize >= line_len {
+    pub fn cutout(&self, column: usize, length: usize) -> Line {
+        let line_width = self.width();
+        let length = length.min(line_width.saturating_sub(column));
+
+        if length == 0 || column >= line_width {
             return Line::new(0);
         }
 
-        let real_start = self.real_index(start);
-        let real_end = self.real_index(end - 1);
+        let (start_index, start_column, start_width) = self.column_to_index(column);
+        let (end_index, end_column, end_width) = self.column_to_index(column + length - 1);
+        let start_gap = start_width - (column - start_column);
+        let end_gap = (column + length) - end_column;
 
         let active_codes = self
-            .active_codes_at(real_start)
+            .active_codes_at(start_index)
             .into_iter()
             .map(StyledUnit::Code);
         let reset_codes = self
-            .reset_codes_for(real_end)
+            .reset_codes_for(end_index)
             .into_iter()
             .map(StyledUnit::Code);
 
         let mut line = Line::new(0);
+
+        // Start line with active codes
         line.content.extend(active_codes);
-        line.content
-            .extend(self.content[real_start..=real_end].iter().cloned());
+
+        // Fill with spaces, if start is inside a grapheme
+        if start_gap < start_width {
+            debug_assert!(start_gap > 0, "start_gap should always be greater than 0");
+            line.content
+                .extend((0..start_gap).map(|_| StyledUnit::grapheme(" ")));
+        }
+
+        let content_range = {
+            let start_index = if start_width > 1 && start_gap < start_width {
+                start_index + 1
+            } else {
+                start_index
+            };
+
+            if end_width > 1 && end_gap < end_width {
+                &self.content[start_index..end_index]
+            } else {
+                &self.content[start_index..=end_index]
+            }
+        };
+
+        // Extend with the grapheme range
+        line.content.extend(content_range.iter().cloned());
+
+        // Fill with spaces, if end is inside a grapheme
+        if end_gap > 0 && end_gap < end_width {
+            line.content
+                .extend((0..end_gap).map(|_| StyledUnit::grapheme(" ")));
+        }
+
+        // End line with reset codes
         line.content.extend(reset_codes);
         line
     }
 
-    /// Paste another line on top of this one, starting at `start`.
-    pub fn paste_on_top(&mut self, other: &Line, start: usize) {
-        let other_len = other.count();
-        if other_len == 0 {
+    /// Paste another line on top of this one, starting at `column`.
+    pub fn paste_on_top(&mut self, other: &Line, column: usize) {
+        let other_width = other.width();
+        if other_width == 0 {
             return;
         }
 
+        debug_assert!(
+            column <= self.width(),
+            "Column {column} out of bounds, width is {}, other width is {}. Cannot paste on top of line after it's end.",
+            self.width(), other.width()
+        );
+
         let mut new_line = Line::new(0);
 
-        if start != 0 {
-            let real_start = self.real_index(start - 1);
-            let reset_codes = self.reset_codes_for(real_start);
-            new_line
-                .content
-                .extend(self.content[..=real_start].iter().cloned());
+        // Add original line content up to `column`
+        if column != 0 {
+            let (start_index, start_column, start_width) = self.column_to_index(column - 1);
+            let start_gap = column - start_column;
+
+            let start_slice = if start_width > 1 && start_gap < start_width {
+                &self.content[..start_index]
+            } else {
+                &self.content[..=start_index]
+            };
+
+            // Add content
+            new_line.content.extend(start_slice.iter().cloned());
+
+            // Fill with spaces if inside a grapheme
+            if start_gap > 0 && start_gap < start_width {
+                new_line
+                    .content
+                    .extend((0..start_gap).map(|_| StyledUnit::grapheme(" ")));
+            }
+
+            // End with reset codes
+            let reset_codes = self.reset_codes_for(start_index);
             new_line
                 .content
                 .extend(reset_codes.into_iter().map(StyledUnit::Code));
         }
 
+        // Add the other line content
         new_line.content.extend(other.content.iter().cloned());
 
-        if start + other_len < self.count() {
-            let real_end = self.real_index(start + other_len - 1);
-            let active_codes = self.active_codes_at(real_end);
+        // Add original line content after `column + other_width`
+        if column + other_width < self.width() {
+            // let real_end = self.real_index(start + other_len - 1);
+            let (end_index, end_column, end_width) = self.column_to_index(column + other_width - 1);
+
+            // Add active codes for the end
+            let active_codes = self.active_codes_at(end_index);
             new_line
                 .content
                 .extend(active_codes.into_iter().map(StyledUnit::Code));
+
+            // Fill with spaces if inside a grapheme
+            let end_gap = end_width - (column + other_width - end_column);
+            if end_gap < end_width && end_gap > 0 {
+                new_line
+                    .content
+                    .extend((0..end_gap).map(|_| StyledUnit::grapheme(" ")));
+            }
+
+            // Add content after the end
             new_line
                 .content
-                .extend(self.content.iter().skip(real_end + 1).cloned());
+                .extend(self.content.iter().skip(end_index + 1).cloned());
         }
 
         self.content = new_line.content;
@@ -272,12 +355,18 @@ impl Line {
         }
 
         self.content = content;
-        debug_assert_eq!(self.count() == 0, self.content.len() == 0);
+        debug_assert_eq!(
+            self.count() == 0,
+            self.content.len() == 0,
+            "Line content {} should be empty if and only if grapheme count {} is 0",
+            self.content.len(),
+            self.count()
+        );
     }
 
     /// Resize the line to fit exactly `width` in grapheme column width.
     pub fn resize_to_fit(&mut self, width: usize) {
-        let mut diff = width as isize - self.count() as isize;
+        let mut diff = width as isize - self.width() as isize;
 
         if diff < 0 {
             // Pop `diff` graphemes
@@ -313,5 +402,130 @@ impl Display for Line {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod paste_tests {
+    use super::*;
+
+    fn paste(line: &str, other: &str, column: usize, expected: &str) {
+        let mut line = Line::from_string(line);
+        let original_line = line.clone();
+        let other = Line::from_string(other);
+        line.paste_on_top(&other, column);
+        assert_eq!(
+            line.to_string(),
+            expected,
+            "\nPasting '{}' on top of '{}' at column {} should result in '{}'",
+            other.to_string(),
+            original_line.to_string(),
+            column,
+            expected
+        );
+    }
+
+    #[test]
+    fn normal_start() {
+        let line = "1234";
+        let other = "hello";
+
+        paste(line, other, 0, "hello");
+        paste(line, other, 1, "1hello");
+        paste(line, other, 2, "12hello");
+    }
+
+    #[test]
+    fn width_start() {
+        let line = "❤️❤️";
+        let other = "hello";
+
+        paste(line, other, 0, "hello");
+        paste(line, other, 1, " hello");
+        paste(line, other, 2, "❤️hello");
+        paste(line, other, 3, "❤️ hello");
+        paste(line, other, 4, "❤️❤️hello");
+    }
+
+    #[test]
+    fn normal_full() {
+        let line = "123456";
+        let other = "hello";
+
+        paste(line, other, 0, "hello6");
+        paste(line, other, 1, "1hello");
+        paste(line, other, 2, "12hello");
+    }
+
+    #[test]
+    fn width_full() {
+        let line = "❤️❤️ ❤️❤️";
+        let other = "hello";
+
+        paste(line, other, 0, "hello❤️❤️");
+        paste(line, other, 1, " hello ❤️");
+        paste(line, other, 2, "❤️hello❤️");
+        paste(line, other, 3, "❤️ hello ");
+        paste(line, other, 4, "❤️❤️hello");
+    }
+
+    #[test]
+    fn width_end() {
+        let line = "12❤️";
+        let other = "hi";
+
+        paste("❤️", "h", 0, "h ");
+        paste(line, other, 0, "hi❤️");
+        paste(line, other, 1, "1hi ");
+        paste(line, other, 2, "12hi");
+        paste(line, other, 3, "12 hi");
+        paste(line, other, 4, "12❤️hi");
+    }
+}
+
+#[cfg(test)]
+mod cutout_tests {
+    use super::*;
+
+    fn cutout(line: &str, column: usize, length: usize, expected: &str) {
+        let line = Line::from_string(line);
+        let cutout = line.cutout(column, length);
+        assert_eq!(
+            cutout.to_string(),
+            expected,
+            "\nCutting out '{}' at column {} with length {} should result in '{}'",
+            line.to_string(),
+            column,
+            length,
+            expected
+        );
+    }
+
+    #[test]
+    fn normal() {
+        let line = "1234567890";
+        cutout(line, 0, 0, "");
+        cutout(line, 0, 5, "12345");
+        cutout(line, 2, 3, "345");
+        cutout(line, 5, 4, "6789");
+        cutout(line, 8, 10, "90");
+        cutout(line, 10, 10, "");
+        cutout(line, 20, 10, "");
+    }
+
+    #[test]
+    fn width() {
+        let line = "❤️❤️❤️❤️";
+        cutout(line, 0, 0, "");
+        cutout(line, 0, 1, " ");
+        cutout(line, 0, 2, "❤️");
+        cutout(line, 0, 3, "❤️ ");
+        cutout(line, 1, 4, " ❤️ ");
+        cutout(line, 1, 5, " ❤️❤️");
+        cutout(line, 1, 6, " ❤️❤️ ");
+        cutout(line, 2, 4, "❤️❤️");
+        cutout(line, 2, 5, "❤️❤️ ");
+        cutout(line, 7, 4, " ");
+        cutout(line, 10, 50, "");
     }
 }
