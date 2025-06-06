@@ -207,13 +207,19 @@ impl Canvas {
         }
 
         if has_right {
-            let real_len = self.buffer.get(0).map(|l| l.content.len()).unwrap_or(0);
-            let last_char_index = real_len - border_color.is_some() as usize; // real_len is reset code
+            let real_len_first = self.buffer.first().map(|l| l.content.len()).unwrap_or(0);
+            let real_len_last = self.buffer.last().map(|l| l.content.len()).unwrap_or(0);
+
+            let last_char_index_first = real_len_first - border_color.is_some() as usize; // real_len is reset code
+            let last_char_index_last = real_len_last - border_color.is_some() as usize; // real_len is reset code
+
             for (i, line) in self.buffer.iter_mut().enumerate() {
                 if i == 0 && has_top {
-                    line.content.insert(last_char_index, top_right.clone());
+                    line.content
+                        .insert(last_char_index_first, top_right.clone());
                 } else if i == lines - 1 && has_bottom {
-                    line.content.insert(last_char_index, bottom_right.clone());
+                    line.content
+                        .insert(last_char_index_last, bottom_right.clone());
                 } else {
                     if let Some(color) = border_color {
                         line.content.push(StyledUnit::Code(Code::Foreground(color)));
