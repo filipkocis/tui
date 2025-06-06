@@ -415,23 +415,6 @@ impl Node {
         hitmap.add_target_area(self.id(), &viewport);
         self.canvas.render_to(&viewport, canvas);
 
-        let viewport_underflow = (
-            (viewport.min.0 as i32 - self.canvas.position.0 as i32)
-                .max(0)
-                .min(u16::MAX as i32) as u16,
-            (viewport.min.1 as i32 - self.canvas.position.1 as i32)
-                .max(0)
-                .min(u16::MAX as i32) as u16,
-        );
-
-        let viewport_offset = (
-            self.style.padding.left + self.style.border.2 as u16,
-            self.style.padding.top + self.style.border.0 as u16,
-        );
-
-        viewport.min.0 += viewport_offset.0.saturating_sub(viewport_underflow.0);
-        viewport.min.1 += viewport_offset.1.saturating_sub(viewport_underflow.1);
-
         let screen_overflow = (
             max.0.saturating_sub(viewport.screen.0),
             max.1.saturating_sub(viewport.screen.1),
@@ -457,6 +440,23 @@ impl Node {
         viewport.max.1 = viewport.max.1.saturating_sub(
             (self.style.padding.bottom + self.style.border.1 as u16).saturating_sub(overflow.1),
         );
+
+        let viewport_underflow = (
+            (viewport.min.0 as i32 - self.canvas.position.0 as i32)
+                .max(0)
+                .min(u16::MAX as i32) as u16,
+            (viewport.min.1 as i32 - self.canvas.position.1 as i32)
+                .max(0)
+                .min(u16::MAX as i32) as u16,
+        );
+
+        let viewport_offset = (
+            self.style.padding.left + self.style.border.2 as u16,
+            self.style.padding.top + self.style.border.0 as u16,
+        );
+
+        viewport.min.0 += viewport_offset.0.saturating_sub(viewport_underflow.0);
+        viewport.min.1 += viewport_offset.1.saturating_sub(viewport_underflow.1);
 
         for child in &self.children {
             let child = child.borrow();
