@@ -379,10 +379,23 @@ impl Node {
     /// Render the node and its children to `canvas` within the given `viewport`. Node's canvas has to be
     /// computed before calling this function.
     pub fn render_to(&self, mut viewport: Viewport, canvas: &mut Canvas, hitmap: &mut HitMap) {
-        viewport.min = (
-            self.canvas.position.0.max(0) as u16,
-            self.canvas.position.1.max(0) as u16,
-        );
+        let is_absolute = self.style.offset.is_absolute();
+
+        viewport.min = if is_absolute {
+            // If the node is absolutely positioned, the min viewport is it's own position
+            (
+                self.canvas.position.0.max(0) as u16,
+                self.canvas.position.1.max(0) as u16,
+            )
+        } else {
+            // If the node is relatively positioned, the min viewport is either it's own position
+            // or the parent viewport min, depending on which is greater. This is to prevent
+            // canvas underflow
+            (
+                (self.canvas.position.0.max(0) as u16).max(viewport.min.0),
+                (self.canvas.position.1.max(0) as u16).max(viewport.min.1),
+            )
+        };
 
         let total_width = self.style.total_width();
         let total_height = self.style.total_height();
@@ -391,7 +404,7 @@ impl Node {
             (self.canvas.position.1 + total_height as i16).max(0) as u16,
         );
 
-        let abs_max = if self.style.offset.is_absolute() {
+        let abs_max = if is_absolute {
             viewport.screen
         } else {
             viewport.max
