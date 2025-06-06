@@ -337,7 +337,7 @@ impl Canvas {
         let take = viewport.max.0.saturating_sub(viewport.min.0) as usize;
         let line = line.cutout(start, take);
 
-        let column = x.max(0) as usize + start;
+        let column = (x as isize + start as isize).max(0) as usize;
         self.buffer[y as usize].paste_on_top(&line, column);
     }
 
