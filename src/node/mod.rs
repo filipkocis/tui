@@ -429,18 +429,6 @@ impl Node {
             total_height.saturating_sub(viewport_span.1),
         );
 
-        let overflow = (
-            screen_overflow.0.max(parent_overflow.0),
-            screen_overflow.1.max(parent_overflow.1),
-        );
-
-        viewport.max.0 = viewport.max.0.saturating_sub(
-            (self.style.padding.right + self.style.border.3 as u16).saturating_sub(overflow.0),
-        );
-        viewport.max.1 = viewport.max.1.saturating_sub(
-            (self.style.padding.bottom + self.style.border.1 as u16).saturating_sub(overflow.1),
-        );
-
         let viewport_underflow = (
             (viewport.min.0 as i32 - self.canvas.position.0 as i32)
                 .max(0)
@@ -448,6 +436,24 @@ impl Node {
             (viewport.min.1 as i32 - self.canvas.position.1 as i32)
                 .max(0)
                 .min(u16::MAX as i32) as u16,
+        );
+
+        let overflow = (
+            screen_overflow
+                .0
+                .max(parent_overflow.0)
+                .saturating_sub(viewport_underflow.0),
+            screen_overflow
+                .1
+                .max(parent_overflow.1)
+                .saturating_sub(viewport_underflow.1),
+        );
+
+        viewport.max.0 = viewport.max.0.saturating_sub(
+            (self.style.padding.right + self.style.border.3 as u16).saturating_sub(overflow.0),
+        );
+        viewport.max.1 = viewport.max.1.saturating_sub(
+            (self.style.padding.bottom + self.style.border.1 as u16).saturating_sub(overflow.1),
         );
 
         let viewport_offset = (
