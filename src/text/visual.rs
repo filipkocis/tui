@@ -198,10 +198,11 @@ impl VisualLine {
             return;
         }
 
-        let Some(grapheme_count) = self.last_grapheme_index() else {
+        let Some(last_grapheme_index) = self.last_grapheme_index() else {
             // If there are no graphemes, skip the style
             return;
         };
+        let grapheme_count = last_grapheme_index + 1;
 
         // If the character is out of bounds, skip it
         if character >= grapheme_count {
@@ -219,14 +220,18 @@ impl VisualLine {
     }
 
     /// Adds a code at the specified grapheme index
+    ///
+    /// # Panics
+    /// Panics if `grapheme_index > content.len()`.
     pub fn add_code(&mut self, code: Code, grapheme_index: usize) {
         // Insert the code at the grapheme index
-        let position = self.get_position(grapheme_index);
-        self.content.insert(position, StyledUnit::Code(code));
+        let index = self.get_index(grapheme_index);
+        self.content.insert(index, StyledUnit::Code(code));
     }
 
-    /// Returns the index `self.content[index]` of the nearest grapheme matching `grapheme_index`
-    pub fn get_position(&self, grapheme_index: usize) -> usize {
+    /// Returns the index `self.content[index]` of the first grapheme matching `grapheme_index`,
+    /// or the `last_grapheme_index + 1` if no such grapheme is found.
+    pub fn get_index(&self, grapheme_index: usize) -> usize {
         let mut last_index = 0;
         for (i, unit) in self.content.iter().enumerate() {
             if let StyledUnit::Grapheme(g) = unit {
@@ -240,6 +245,6 @@ impl VisualLine {
         }
 
         // If the grapheme index is not found, return the last index
-        last_index
+        last_index + 1
     }
 }
