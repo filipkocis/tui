@@ -101,6 +101,7 @@ impl App {
     pub fn resize(&mut self, width: u16, height: u16) -> io::Result<()> {
         self.viewport.max = (width, height);
         self.viewport.screen = (width, height);
+        self.context.screen_size = self.viewport.screen;
         self.canvas = Canvas::new(width as usize, height as usize);
         self.hitmap.resize(width, height);
 

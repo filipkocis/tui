@@ -9,11 +9,14 @@ pub struct AppContext {
     /// During drag, this field does not get changed automatically.
     pub hold: Option<(u16, u16, NodeId)>,
 
-    /// Current node with focus. Set on mouse down event, before the event is dispatched. 
+    /// Current node with focus. Set on mouse down event, before the event is dispatched.
     /// Should be changed manually to implement more complex focus logic.    
     pub focus: Option<(NodeId, WeakNodeHandle)>,
 
     pub hover: Option<WeakNodeHandle>,
+
+    /// Screen size
+    pub screen_size: (u16, u16),
 }
 
 /// Unlike [`AppContext`], this context is used to store temporary per-event per-node data. Passed
@@ -28,7 +31,7 @@ pub struct Context<'a> {
     pub event: Event,
 
     /// Current target node.
-    pub target_weak: WeakNodeHandle, 
+    pub target_weak: WeakNodeHandle,
     /// Current node.
     pub self_weak: WeakNodeHandle,
 
@@ -37,7 +40,13 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(app: &'a mut AppContext, target_id: NodeId, event: Event, target_weak: WeakNodeHandle, self_weak: WeakNodeHandle) -> Self {
+    pub fn new(
+        app: &'a mut AppContext,
+        target_id: NodeId,
+        event: Event,
+        target_weak: WeakNodeHandle,
+        self_weak: WeakNodeHandle,
+    ) -> Self {
         Self {
             app,
             target_id,
