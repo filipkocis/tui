@@ -1,6 +1,6 @@
 use crossterm::event::Event;
 
-use crate::{NodeId, WeakNodeHandle};
+use crate::{NodeHandle, NodeId, WeakNodeHandle};
 
 /// Used to store persistent context data for the application.
 #[derive(Debug, Default)]
@@ -11,12 +11,25 @@ pub struct AppContext {
 
     /// Current node with focus. Set on mouse down event, before the event is dispatched.
     /// Should be changed manually to implement more complex focus logic.    
+    /// Initially set to the root node.
     pub focus: Option<(NodeId, WeakNodeHandle)>,
 
+    /// TODO: this one has no use yet
     pub hover: Option<WeakNodeHandle>,
 
     /// Screen size
     pub screen_size: (u16, u16),
+}
+
+impl AppContext {
+    pub fn new(root: &NodeHandle) -> Self {
+        Self {
+            hold: None,
+            focus: Some((root.borrow().id(), root.weak())),
+            hover: None,
+            screen_size: (0, 0)
+        }
+    }
 }
 
 /// Unlike [`AppContext`], this context is used to store temporary per-event per-node data. Passed

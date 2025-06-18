@@ -68,6 +68,8 @@ impl App {
     }
 
     pub fn new(root: NodeHandle) -> Self {
+        let context = AppContext::new(&root);
+
         App {
             raw: true,
             alternate: true,
@@ -76,7 +78,7 @@ impl App {
             canvas: Canvas::default(),
             viewport: Viewport::new(),
 
-            context: AppContext::default(),
+            context,
         }
     }
 
