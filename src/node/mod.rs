@@ -6,8 +6,8 @@ pub use handle::{NodeHandle, WeakNodeHandle};
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    text::Text, Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style,
-    Viewport,
+    Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
+    text::Text,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -58,8 +58,10 @@ pub struct Node {
     pub text: Text,
 
     /// Weak ref to parent. Use with caution to prevent deadlocks or memory leaks
-    pub(crate) parent: Option<WeakNodeHandle>,
-    children: Vec<NodeHandle>,
+    pub parent: Option<WeakNodeHandle>,
+    /// Children of this node. Use with caution, when adding children, make sure to set the
+    /// parent of the child node to this node's weak handle
+    pub children: Vec<NodeHandle>,
 
     /// Event handlers registered on this node. It's not public since eventhandlers take `self` as
     /// an argument
