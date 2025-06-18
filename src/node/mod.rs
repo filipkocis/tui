@@ -6,8 +6,8 @@ pub use handle::{NodeHandle, WeakNodeHandle};
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
-    text::Text,
+    text::Text, Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style,
+    Viewport,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -126,10 +126,13 @@ impl Node {
         (x.max(0) as u16, y.max(0) as u16)
     }
 
-    /// Sort children by z-index
+    /// Sort children by z-index, absolute children take precedence over relative children with the
+    /// same z-index. Returns the result.
     #[inline]
-    pub fn z_sort_children(&mut self) {
-        self.children.sort_by(|a, b| {
+    pub fn z_sort_children(&self) -> Vec<&NodeHandle> {
+        let mut children = self.children.iter().collect::<Vec<_>>();
+
+        children.sort_by(|a, b| {
             let a = a.borrow();
             let b = b.borrow();
 
@@ -141,7 +144,9 @@ impl Node {
             } else {
                 a.style.z_index.cmp(&b.style.z_index)
             }
-        })
+        });
+
+        children
     }
 
     /// Returns the available content size for this node, it's the content size minus any gaps
@@ -329,9 +334,6 @@ impl Node {
     /// - `parent_position` is the start of this node's canvas.
     /// - `parent_size` is the available parent's content size for this child to grow into.
     pub fn calculate_canvas(&mut self, parent_position: Offset) {
-        // Apply z-index sort
-        self.z_sort_children();
-
         let offset_position = parent_position.add(self.style.offset);
         let content_position = offset_position.add_tuple((
             self.style.padding.left as i16 + self.style.border.2 as i16,
@@ -491,7 +493,7 @@ impl Node {
         viewport.min.0 += viewport_offset.0.saturating_sub(viewport_underflow.0);
         viewport.min.1 += viewport_offset.1.saturating_sub(viewport_underflow.1);
 
-        for child in &self.children {
+        for child in self.z_sort_children() {
             let child = child.borrow();
             child.render_to(viewport, canvas, hitmap);
         }
