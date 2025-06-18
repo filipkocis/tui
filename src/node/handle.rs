@@ -33,12 +33,14 @@ impl NodeHandle {
     }
 
     /// Constructs a weak handle. Use with caution.
+    #[inline]
     pub fn weak(&self) -> WeakNodeHandle {
         WeakNodeHandle(Rc::downgrade(self.inner()))
     }
 
+    /// Returns the inner `Rc<RefCell<Node>>`, use with caution.
     #[inline(always)]
-    fn inner(&self) -> &Rc<RefCell<Node>> {
+    pub fn inner(&self) -> &Rc<RefCell<Node>> {
         &self.0
     }
 
