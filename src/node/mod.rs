@@ -171,6 +171,31 @@ impl Node {
         size
     }
 
+
+    /// Adds a child node to the current node. The child node's parent will be set `parent`, make
+    /// sure the `parent` is a weak handle to this node.
+    #[inline]
+    pub fn add_child(&mut self, child: NodeHandle, parent: WeakNodeHandle) {
+        assert_eq!(
+            Rc::strong_count(&child.0),
+            1,
+            "Child node must not be shared, it must be unique to this parent"
+        );
+
+        assert_eq!(
+            parent
+                .upgrade()
+                .map(|p| p.try_borrow().ok().map(|p| p.id()))
+                .flatten(),
+            None,
+            "Weak parent can be borrowed, which means it is not `self` ({:?})",
+            self.id(),
+        );
+
+        child.borrow_mut().parent = Some(parent);
+        self.children.push(child);
+    }
+
     /// Computes the node's size and canvas. This should be called before
     /// [rendering](Self::render_to)
     pub fn compute(&mut self, parent_position: Offset, parent_available_size: Size) {
