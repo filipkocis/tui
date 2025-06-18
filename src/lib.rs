@@ -21,21 +21,17 @@ pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle};
 pub use style::{Offset, Padding, Size, SizeValue, Style};
 pub use viewport::Viewport;
 
-use std::{
-    cell::RefCell,
-    io::{self, stdin, Read},
-    rc::Rc,
-    time::Duration,
-};
+pub use crossterm::{self};
+
+use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
 use crossterm::{
-    self,
     event::{
         self, DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
         EnableFocusChange, EnableMouseCapture, Event, KeyEvent, MouseEvent, MouseEventKind,
     },
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 
 pub struct App {
