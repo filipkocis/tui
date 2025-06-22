@@ -501,7 +501,7 @@ impl Node {
         }
     }
 
-    /// Handle a single event for this node. returns tru wheter it should stop propagating
+    /// Handle a single event for this node. Returns wheter it should stop propagating
     pub fn handle_event(&mut self, ctx: &mut Context, is_capturing: bool) -> bool {
         self.handlers
             .clone()

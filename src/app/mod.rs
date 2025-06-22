@@ -122,6 +122,37 @@ impl App {
         execute!(io::stdout(), crossterm::cursor::MoveTo(cursor_x, cursor_y))
     }
 
+    /// Handles an event, dispatching it to the target node if applicable.
+    pub fn handle_event(&mut self, event: Event) -> io::Result<()> {
+        use crossterm::event::{KeyCode, KeyModifiers};
+        match event {
+            Event::Key(event) => {
+                self.dispatch_key_event(event);
+
+                if event.code == KeyCode::Char('c')
+                    && event.modifiers.contains(KeyModifiers::CONTROL)
+                {
+                    return Ok(());
+                }
+            }
+            Event::Mouse(mouse_event) => {
+                self.dispatch_mouse_event(mouse_event);
+                resize = Some(self.viewport.screen); // just for debug, remove later
+            }
+            Event::TerminalResize(width, height) => {
+                resize = Some((width, height));
+                println!("Resize {width}x{height}")
+            }
+            Event::Paste(paste) => self.dispatch_paste_event(paste),
+
+            event => println!("{event:?}"),
+        }
+
+        render = true;
+        Ok(())
+    }
+
+    /// Runs the main application loop.
     pub fn run(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
         self.resize(self.viewport.screen.0, self.viewport.screen.1)?;
@@ -134,31 +165,7 @@ impl App {
                 let event = crossterm::event::read()?;
                 let event = Event::from_crossterm_event(event);
 
-                use crossterm::event::{KeyCode, KeyModifiers};
-                match event {
-                    Event::Key(event) => {
-                        self.dispatch_key_event(event);
-
-                        if event.code == KeyCode::Char('c')
-                            && event.modifiers.contains(KeyModifiers::CONTROL)
-                        {
-                            return Ok(());
-                        }
-                    }
-                    Event::Mouse(mouse_event) => {
-                        self.dispatch_mouse_event(mouse_event);
-                        resize = Some(self.viewport.screen); // just for debug, remove later
-                    }
-                    Event::TerminalResize(width, height) => {
-                        resize = Some((width, height));
-                        println!("Resize {width}x{height}")
-                    }
-                    Event::Paste(paste) => self.dispatch_paste_event(paste),
-
-                    event => println!("{event:?}"),
-                }
-
-                render = true;
+                self.handle_event(event)?;
             }
 
             if let Some((width, height)) = resize.take() {
