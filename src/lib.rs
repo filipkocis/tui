@@ -1,3 +1,4 @@
+mod action;
 mod canvas;
 mod char;
 mod context;
@@ -11,6 +12,7 @@ mod style;
 pub mod text;
 mod viewport;
 
+pub use action::Action;
 pub use canvas::Canvas;
 pub use char::{Char, Code};
 pub use context::{AppContext, Context};

@@ -21,7 +21,6 @@ pub enum Event {
     /// enabled.
     Paste(String),
     /// An resize event with new dimensions after resize (columns, rows).
-    /// **Note** that resize events can occur in batches.
     TerminalResize(u16, u16),
 }
 
