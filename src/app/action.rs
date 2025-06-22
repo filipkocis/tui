@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crossterm::event::KeyCode;
 
 use crate::{Event, NodeId};
@@ -21,4 +23,27 @@ pub enum Action {
     FocusPrevious,
     /// Focus a specific node by its ID
     FocusNode(NodeId),
+}
+
+#[derive(Debug, Default)]
+/// Queue of actions to be processed by the application.
+/// Used inside the [app context](crate::AppContext).
+pub struct Actions {
+    /// Internal actions queue
+    pub(crate) queue: VecDeque<Action>,
+}
+
+impl Actions {
+    /// Create a new empty actions queue.
+    pub fn new() -> Self {
+        Self {
+            queue: VecDeque::new(),
+        }
+    }
+
+    /// Adds an action to the queue.
+    #[inline]
+    pub fn emmit(&mut self, action: Action) {
+        self.queue.push_back(action);
+    }
 }

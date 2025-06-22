@@ -1,4 +1,4 @@
-use crate::{Event, NodeHandle, NodeId, WeakNodeHandle};
+use crate::{Action, Event, NodeHandle, NodeId, WeakNodeHandle, action::Actions};
 
 /// Used to store persistent context data for the application.
 #[derive(Debug, Default)]
@@ -6,7 +6,6 @@ pub struct AppContext {
     /// Current hold position with it's target, from a mouse_down event.
     /// During drag, this field does not get changed automatically.
     pub hold: Option<(u16, u16, NodeId)>,
-
     /// Current node with focus. Set on mouse down event, before the event is dispatched.
     /// Should be changed manually to implement more complex focus logic.    
     /// Initially set to the root node.
@@ -17,6 +16,9 @@ pub struct AppContext {
 
     /// Screen size
     pub screen_size: (u16, u16),
+
+    /// Actions queue for the application. Executed in the main loop.
+    pub actions: Actions,
 }
 
 impl AppContext {
@@ -26,7 +28,14 @@ impl AppContext {
             focus: Some((root.borrow().id(), root.weak())),
             hover: None,
             screen_size: (0, 0),
+            actions: Actions::new(),
         }
+    }
+
+    /// Emmit an action
+    #[inline]
+    pub fn emmit(&mut self, action: Action) {
+        self.actions.emmit(action);
     }
 }
 

@@ -1,4 +1,4 @@
-mod action;
+pub mod action;
 mod context;
 mod event;
 mod hitmap;
