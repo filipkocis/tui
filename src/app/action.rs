@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyModifiers};
 
-use crate::{Event, NodeId};
+use crate::NodeId;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 /// This defines the actions that can be performed in the application.
@@ -13,16 +13,14 @@ pub enum Action {
     Quit,
     /// Emmit an event to the application.
     /// This may cause an `event -> action -> event` loop.
-    EmmitEvent(Event),
-    /// Emmit key inputs
-    KeyInputs(Vec<KeyCode>),
+    EmmitEvent(crossterm::event::Event),
+    /// Emmit key inputs with modifiers. Each key will be processed as `press`ed and `release`d
+    KeyInputs(Vec<(KeyCode, KeyModifiers)>),
 
     /// Focus the next node
     FocusNext,
     /// Focus the previous node
     FocusPrevious,
-    /// Focus a specific node by its ID
-    FocusNode(NodeId),
 }
 
 #[derive(Debug, Default)]

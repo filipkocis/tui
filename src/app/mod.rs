@@ -32,6 +32,7 @@ pub struct App {
 
     context: AppContext,
     should_resize: Option<(u16, u16)>,
+    should_quit: bool,
 }
 
 impl App {
@@ -65,6 +66,7 @@ impl App {
 
             context,
             should_resize: None,
+            should_quit: false,
         }
     }
 
@@ -135,25 +137,99 @@ impl App {
     }
 
     /// Handles an event, dispatching it to the target node if applicable.
-    pub fn handle_event(&mut self, event: Event) -> io::Result<()> {
-        match event {
-            Event::Key(event) => {
-                self.dispatch_key_event(event);
+    pub fn handle_crossterm_event(&mut self, event: crossterm::event::Event) -> io::Result<()> {
+        if let Some(key_event) = event.as_key_event() {
+            if self.should_quit(&key_event) {
+                return Ok(());
             }
-            Event::Mouse(mouse_event) => {
+        }
+
+        use crossterm::event::Event as CEvent;
+        match event {
+            CEvent::Key(key_event) => self.dispatch_key_event(key_event),
+            CEvent::Mouse(mouse_event) => {
                 self.dispatch_mouse_event(mouse_event);
                 self.should_resize = Some(self.viewport.screen); // just for debug, remove later
             }
-            Event::TerminalResize(width, height) => {
+            CEvent::Resize(width, height) => {
                 self.should_resize = Some((width, height));
                 println!("Resize {width}x{height}")
             }
-            Event::Paste(paste) => self.dispatch_paste_event(paste),
+            CEvent::Paste(paste) => self.dispatch_paste_event(paste),
 
             event => println!("{event:?}"),
         }
 
         Ok(())
+    }
+
+    /// Handles an action, processing it based on the application's context.
+    pub fn handle_action(&mut self, action: Action) -> io::Result<()> {
+        match action {
+            Action::Quit => self.should_quit = true,
+            Action::EmmitEvent(event) => {
+                if let Some(key_event) = event.as_key_event() {
+                    if self.should_quit(&key_event) {
+                        return Ok(());
+                    }
+                }
+
+                self.handle_crossterm_event(event)?;
+            }
+            Action::KeyInputs(key_inputs) => {
+                for (key, modifiers) in key_inputs {
+                    let mut key_event = KeyEvent {
+                        code: key,
+                        modifiers,
+                        kind: crossterm::event::KeyEventKind::Press,
+                        state: crossterm::event::KeyEventState::NONE,
+                    };
+                    if self.should_quit(&key_event) {
+                        return Ok(());
+                    }
+
+                    self.dispatch_key_event(key_event);
+                    key_event.kind = crossterm::event::KeyEventKind::Release;
+                    self.dispatch_key_event(key_event);
+                }
+            }
+            Action::FocusNext => {
+                if let Some((focus_id, focus_weak)) = self.context.focus.clone() {
+                    if let Some((new_focus_id, new_focus_weak)) =
+                        cycle_focus_flat(focus_weak, None, Navigation::Next, true)
+                    {
+                        self.context.focus = Some((new_focus_id, new_focus_weak));
+                        self.dispatch_event(Event::NodeFocusLost, focus_id);
+                        self.dispatch_event(Event::NodeFocusGained, new_focus_id);
+                    }
+                }
+            }
+            Action::FocusPrevious => {
+                if let Some((focus_id, focus_weak)) = self.context.focus.clone() {
+                    if let Some((new_focus_id, new_focus_weak)) =
+                        cycle_focus_flat(focus_weak, None, Navigation::Previous, true)
+                    {
+                        self.context.focus = Some((new_focus_id, new_focus_weak));
+                        self.dispatch_event(Event::NodeFocusLost, focus_id);
+                        self.dispatch_event(Event::NodeFocusGained, new_focus_id);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Checks if the application should quit based on the key event. Sets `self.should_quit` to
+    /// true if the `quit_on` condition is met.
+    pub fn should_quit(&mut self, event: &crossterm::event::KeyEvent) -> bool {
+        if let Some((code, modifiers)) = self.quit_on {
+            if event.code == code && event.modifiers.contains(modifiers) {
+                self.should_quit = true;
+                return true;
+            }
+        }
+        false
     }
 
     /// Runs the main application loop.
@@ -164,20 +240,21 @@ impl App {
         loop {
             let mut render = false;
 
+            // Poll for events without blocking
             while crossterm::event::poll(Duration::from_millis(0))? {
                 let event = crossterm::event::read()?;
-                let event = Event::from_crossterm_event(event);
-
-                if let Some(e) = event.as_key_event() {
-                    if let Some((code, modifiers)) = self.quit_on {
-                        if e.code == code && e.modifiers.contains(modifiers) {
-                            return Ok(());
-                        }
-                    }
-                }
-
-                self.handle_event(event)?;
+                self.handle_crossterm_event(event)?;
                 render = true;
+            }
+
+            // Drain the actions queue
+            while let Some(action) = self.context.actions.queue.pop_front() {
+                self.handle_action(action)?;
+            }
+
+            // Check if we should quit
+            if self.should_quit {
+                return Ok(());
             }
 
             timed(|| self.resize())?;
