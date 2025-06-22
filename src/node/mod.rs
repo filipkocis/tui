@@ -6,8 +6,8 @@ pub use handle::{NodeHandle, WeakNodeHandle};
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    text::Text, Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style,
-    Viewport,
+    Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
+    text::Text,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -99,22 +99,24 @@ impl Node {
         self.canvas.position
     }
 
-    /// Returns the node's `canvas.max(0) + cursor` position combined with the border and padding.
-    /// Returns `None` if node's [`Text`] cursor is not set.
+    /// Returns the focus cursor position, which will either be the text's cursor position, or the
+    /// content-start of the node's canvas.
     #[inline]
-    pub fn absolute_cursor_position(&self) -> Option<(u16, u16)> {
-        let Some((cx, cy)) = self.text.cursor else {
-            return None;
-        };
+    pub fn focus_cursor_position(&self) -> (u16, u16) {
         let (px, py) = self.canvas.position;
-
         let xw = self.style.border.2 as u16 + self.style.padding.left;
         let xh = self.style.border.0 as u16 + self.style.padding.top;
 
-        Some((
-            (px + xw as i16).max(0) as u16 + cx,
-            (py + xh as i16).max(0) as u16 + cy,
-        ))
+        // Base cursor position
+        let x = px as i32 + xw as i32;
+        let y = py as i32 + xh as i32;
+
+        if let Some((cx, cy)) = self.text.cursor {
+            return ((x + cx as i32).max(0) as u16, (y + cy as i32).max(0) as u16);
+        }
+
+        // If the cursor is not set, return the base position
+        (x.max(0) as u16, y.max(0) as u16)
     }
 
     /// Primitive calculation of `pos - node.canvas.position`, clamped to 0

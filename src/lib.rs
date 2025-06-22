@@ -129,10 +129,7 @@ impl App {
         };
 
         let focus = focus.borrow();
-        let Some((cursor_x, cursor_y)) = focus.absolute_cursor_position() else {
-            return Ok(());
-        };
-
+        let (cursor_x, cursor_y) = focus.focus_cursor_position();
         execute!(io::stdout(), crossterm::cursor::MoveTo(cursor_x, cursor_y))
     }
 
