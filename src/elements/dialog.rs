@@ -1,8 +1,8 @@
 use crossterm::{event::KeyModifiers, style::Color};
 
-use crate::{node::NodeHandle, text::Text, Node, Offset, Padding, Size, SizeValue};
+use crate::{Node, Offset, Padding, Size, SizeValue, node::NodeHandle, text::Text};
 
-use super::{button::MouseClickHandler, Button, Draggable};
+use super::{Button, Draggable, button::MouseClickHandler};
 
 pub struct Dialog;
 

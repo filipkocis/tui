@@ -27,7 +27,7 @@ impl AppContext {
             hold: None,
             focus: Some((root.borrow().id(), root.weak())),
             hover: None,
-            screen_size: (0, 0)
+            screen_size: (0, 0),
         }
     }
 }

@@ -18,7 +18,9 @@ impl HitMap {
 
     /// Returns the id of the cell at `x, y`
     pub fn get(&self, x: u16, y: u16) -> Option<NodeId> {
-        self.map.get(y as usize).and_then(|row| row.get(x as usize).copied())
+        self.map
+            .get(y as usize)
+            .and_then(|row| row.get(x as usize).copied())
     }
 
     /// Resizes the hitmap to the new size, resets all cells with `NodeId(0)`
@@ -59,7 +61,7 @@ impl HitMap {
 
     pub fn debug_render(&self) {
         use crossterm::cursor::MoveTo;
-        use std::io::{stdout, Write};
+        use std::io::{Write, stdout};
 
         for (i, row) in self.map.iter().enumerate() {
             print!("{}", MoveTo(0, i as u16));

@@ -1,6 +1,6 @@
 use crate::{Context, Node, SizeValue};
 
-use super::{on_drag_handler, MouseDragEvent, OnDragResult};
+use super::{MouseDragEvent, OnDragResult, on_drag_handler};
 
 pub struct Resizable;
 

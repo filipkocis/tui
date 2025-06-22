@@ -44,12 +44,7 @@ impl EventHandlers {
         }
     }
 
-    pub fn handle(
-        &mut self,
-        ctx: &mut Context,
-        node: &mut Node,
-        is_capturing: bool,
-    ) -> bool {
+    pub fn handle(&mut self, ctx: &mut Context, node: &mut Node, is_capturing: bool) -> bool {
         let mut handled = false;
 
         let handlers = if is_capturing {

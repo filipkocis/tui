@@ -1,6 +1,6 @@
 use crossterm::event::{KeyModifiers, MouseButton, MouseEventKind};
 
-use crate::{text::Text, Context, IntoEventHandler, Node, Size};
+use crate::{Context, IntoEventHandler, Node, Size, text::Text};
 
 pub struct Button;
 

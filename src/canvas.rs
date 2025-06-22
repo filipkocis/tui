@@ -1,14 +1,13 @@
-use std::io::{self, stdout, Write};
+use std::io::{self, Write, stdout};
 
 use crossterm::{
-    cursor,
+    QueueableCommand, cursor,
     style::{self, Color},
-    QueueableCommand,
 };
 
 use crate::{
-    text::{StyledUnit, Text},
     Code, Line, Padding, Size, Style, Viewport,
+    text::{StyledUnit, Text},
 };
 
 #[derive(Debug, Default)]

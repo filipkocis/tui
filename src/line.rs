@@ -5,8 +5,8 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    text::{StyledUnit, VisualGrapheme},
     Code,
+    text::{StyledUnit, VisualGrapheme},
 };
 
 #[derive(Debug, Default, Clone)]
@@ -215,7 +215,8 @@ impl Line {
         debug_assert!(
             column <= self.width(),
             "Column {column} out of bounds, width is {}, other width is {}. Cannot paste on top of line after it's end.",
-            self.width(), other.width()
+            self.width(),
+            other.width()
         );
 
         let mut new_line = Line::new(0);

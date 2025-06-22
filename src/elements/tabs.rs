@@ -1,8 +1,8 @@
 use crossterm::style::Color;
 
 use crate::{
-    text::{StyleSpan, Text},
     Code, Node, NodeHandle, Offset, Padding, Size, SizeValue,
+    text::{StyleSpan, Text},
 };
 
 use super::Button;

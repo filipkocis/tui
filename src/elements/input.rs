@@ -1,8 +1,8 @@
 use crossterm::event::KeyCode;
 
 use crate::{
-    text::{BufferLine, Text},
     Context, Node,
+    text::{BufferLine, Text},
 };
 
 /// A simple text input element that allows for multi-line input.

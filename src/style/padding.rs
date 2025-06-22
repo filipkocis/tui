@@ -18,7 +18,10 @@ impl Padding {
     #[inline]
     pub fn separate(top: u16, right: u16, bottom: u16, left: u16) -> Self {
         Self {
-            top, right, bottom, left
+            top,
+            right,
+            bottom,
+            left,
         }
     }
 
@@ -65,7 +68,7 @@ impl Padding {
     }
 
     /// Returns self as a tuple (top, right, bottom, left)
-    #[inline] 
+    #[inline]
     pub fn tuple(&self) -> (u16, u16, u16, u16) {
         self.into()
     }
