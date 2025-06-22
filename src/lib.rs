@@ -2,6 +2,7 @@ mod canvas;
 mod char;
 mod context;
 mod elements;
+mod event;
 mod handler;
 mod hitmap;
 mod line;
@@ -14,6 +15,7 @@ pub use canvas::Canvas;
 pub use char::{Char, Code};
 pub use context::{AppContext, Context};
 pub use elements::*;
+pub use event::Event;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use hitmap::HitMap;
 pub use line::Line;
@@ -27,8 +29,8 @@ use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
 use crossterm::{
     event::{
-        self, DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
-        EnableFocusChange, EnableMouseCapture, Event, KeyEvent, MouseEvent, MouseEventKind,
+        DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
+        EnableFocusChange, EnableMouseCapture, KeyEvent, MouseEvent, MouseEventKind,
     },
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -141,10 +143,11 @@ impl App {
             let mut resize = None;
             let mut render = false;
 
-            while event::poll(Duration::from_millis(0))? {
-                let event = event::read()?;
+            while crossterm::event::poll(Duration::from_millis(0))? {
+                let event = crossterm::event::read()?;
+                let event = Event::from_crossterm_event(event);
 
-                use event::*;
+                use crossterm::event::{KeyCode, KeyModifiers};
                 match event {
                     Event::Key(event) => {
                         self.dispatch_key_event(event);
@@ -159,7 +162,7 @@ impl App {
                         self.dispatch_mouse_event(mouse_event);
                         resize = Some(self.viewport.screen); // just for debug, remove later
                     }
-                    Event::Resize(width, height) => {
+                    Event::TerminalResize(width, height) => {
                         resize = Some((width, height));
                         println!("Resize {width}x{height}")
                     }

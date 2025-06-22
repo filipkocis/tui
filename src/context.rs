@@ -1,6 +1,4 @@
-use crossterm::event::Event;
-
-use crate::{NodeHandle, NodeId, WeakNodeHandle};
+use crate::{Event, NodeHandle, NodeId, WeakNodeHandle};
 
 /// Used to store persistent context data for the application.
 #[derive(Debug, Default)]
