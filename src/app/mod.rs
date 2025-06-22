@@ -30,6 +30,8 @@ pub struct App {
     viewport: Viewport,
 
     context: AppContext,
+    should_resize: Option<(u16, u16)>,
+    // should_render: bool,
 }
 
 impl App {
@@ -61,9 +63,11 @@ impl App {
             viewport: Viewport::new(),
 
             context,
+            should_resize: None,
         }
     }
 
+    /// Prepares the terminal screen based on the application settings.
     fn prepare_screen(&mut self) -> io::Result<()> {
         use crossterm::event::{EnableBracketedPaste, EnableFocusChange, EnableMouseCapture};
 
@@ -84,7 +88,12 @@ impl App {
         Ok(())
     }
 
-    pub fn resize(&mut self, width: u16, height: u16) -> io::Result<()> {
+    /// Recomputes and renders the application based on `self.should_resize`.
+    pub fn resize(&mut self) -> io::Result<()> {
+        let Some((width, height)) = self.should_resize else {
+            return Ok(());
+        };
+
         self.viewport.max = (width, height);
         self.viewport.screen = (width, height);
         self.context.screen_size = self.viewport.screen;
@@ -97,6 +106,7 @@ impl App {
         self.render()
     }
 
+    /// Renders the application to the terminal.
     pub fn render(&mut self) -> io::Result<()> {
         self.root
             .borrow()
@@ -108,6 +118,7 @@ impl App {
         Ok(())
     }
 
+    /// Moves the cursor to the focus position in the terminal.
     pub fn move_cursor_to_focus(&mut self) -> io::Result<()> {
         let Some((_, ref focus_weak)) = self.context.focus else {
             return Ok(());
@@ -125,6 +136,7 @@ impl App {
     /// Handles an event, dispatching it to the target node if applicable.
     pub fn handle_event(&mut self, event: Event) -> io::Result<()> {
         use crossterm::event::{KeyCode, KeyModifiers};
+
         match event {
             Event::Key(event) => {
                 self.dispatch_key_event(event);
@@ -137,10 +149,10 @@ impl App {
             }
             Event::Mouse(mouse_event) => {
                 self.dispatch_mouse_event(mouse_event);
-                resize = Some(self.viewport.screen); // just for debug, remove later
+                self.should_resize = Some(self.viewport.screen); // just for debug, remove later
             }
             Event::TerminalResize(width, height) => {
-                resize = Some((width, height));
+                self.should_resize = Some((width, height));
                 println!("Resize {width}x{height}")
             }
             Event::Paste(paste) => self.dispatch_paste_event(paste),
@@ -148,17 +160,15 @@ impl App {
             event => println!("{event:?}"),
         }
 
-        render = true;
         Ok(())
     }
 
     /// Runs the main application loop.
     pub fn run(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
-        self.resize(self.viewport.screen.0, self.viewport.screen.1)?;
+        self.should_resize = Some(self.viewport.screen);
 
         loop {
-            let mut resize = None;
             let mut render = false;
 
             while crossterm::event::poll(Duration::from_millis(0))? {
@@ -166,14 +176,13 @@ impl App {
                 let event = Event::from_crossterm_event(event);
 
                 self.handle_event(event)?;
+                render = true;
             }
 
-            if let Some((width, height)) = resize.take() {
-                self.resize(width, height);
-            }
+            timed(|| self.resize())?;
 
             if render {
-                self.render();
+                timed(|| self.render())?;
             }
         }
     }
