@@ -13,7 +13,7 @@ pub use viewport::Viewport;
 use std::{cell::RefCell, io, rc::Rc, time::Duration};
 
 use crossterm::{
-    event::{KeyEvent, MouseEvent, MouseEventKind},
+    event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind},
     execute,
     terminal::{LeaveAlternateScreen, disable_raw_mode},
 };
@@ -21,6 +21,7 @@ use crossterm::{
 use crate::*;
 
 pub struct App {
+    pub quit_on: Option<(KeyCode, KeyModifiers)>,
     raw: bool,
     alternate: bool,
     root: NodeHandle,
@@ -31,7 +32,6 @@ pub struct App {
 
     context: AppContext,
     should_resize: Option<(u16, u16)>,
-    // should_render: bool,
 }
 
 impl App {
@@ -55,6 +55,7 @@ impl App {
         let context = AppContext::new(&root);
 
         App {
+            quit_on: Some((KeyCode::Char('c'), KeyModifiers::CONTROL)),
             raw: true,
             alternate: true,
             root,
@@ -90,7 +91,7 @@ impl App {
 
     /// Recomputes and renders the application based on `self.should_resize`.
     pub fn resize(&mut self) -> io::Result<()> {
-        let Some((width, height)) = self.should_resize else {
+        let Some((width, height)) = self.should_resize.take() else {
             return Ok(());
         };
 
@@ -135,17 +136,9 @@ impl App {
 
     /// Handles an event, dispatching it to the target node if applicable.
     pub fn handle_event(&mut self, event: Event) -> io::Result<()> {
-        use crossterm::event::{KeyCode, KeyModifiers};
-
         match event {
             Event::Key(event) => {
                 self.dispatch_key_event(event);
-
-                if event.code == KeyCode::Char('c')
-                    && event.modifiers.contains(KeyModifiers::CONTROL)
-                {
-                    return Ok(());
-                }
             }
             Event::Mouse(mouse_event) => {
                 self.dispatch_mouse_event(mouse_event);
@@ -174,6 +167,14 @@ impl App {
             while crossterm::event::poll(Duration::from_millis(0))? {
                 let event = crossterm::event::read()?;
                 let event = Event::from_crossterm_event(event);
+
+                if let Some(e) = event.as_key_event() {
+                    if let Some((code, modifiers)) = self.quit_on {
+                        if e.code == code && e.modifiers.contains(modifiers) {
+                            return Ok(());
+                        }
+                    }
+                }
 
                 self.handle_event(event)?;
                 render = true;
