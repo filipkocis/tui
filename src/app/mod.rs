@@ -1,6 +1,7 @@
 pub mod action;
 mod context;
 mod event;
+pub mod focus;
 mod hitmap;
 mod viewport;
 
@@ -18,7 +19,10 @@ use crossterm::{
     terminal::{LeaveAlternateScreen, disable_raw_mode},
 };
 
-use crate::*;
+use crate::{
+    focus::{Navigation, cycle_focus_flat},
+    *,
+};
 
 pub struct App {
     pub quit_on: Option<(KeyCode, KeyModifiers)>,
