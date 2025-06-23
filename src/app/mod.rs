@@ -337,7 +337,7 @@ impl App {
         }
 
         // Execute the event phases
-        self.execute_event_phases(event, path);
+        self.execute_event_phases(event, &path);
     }
 
     /// Executes the event phases (capture, target, bubble) for the given event and target node.
@@ -349,14 +349,11 @@ impl App {
     ///
     /// # Safety
     /// No borrows of nodes in the path should be held while calling this method.
-    fn execute_event_phases(
-        &mut self,
-        event: Event,
-        path: Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>,
-    ) {
-        let (target, target_weak) = path
-            .first()
-            .expect("Path must contain at least the target node");
+    fn execute_event_phases(&mut self, event: Event, path: &[(Rc<RefCell<Node>>, WeakNodeHandle)]) {
+        let Some((target, target_weak)) = path.first() else {
+            // No target node in the path, nothing to do
+            return;
+        };
         let target_id = target.borrow().id();
 
         // Create event handler context
