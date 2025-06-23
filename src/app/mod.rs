@@ -24,10 +24,7 @@ use crossterm::{
     terminal::{LeaveAlternateScreen, disable_raw_mode},
 };
 
-use crate::{
-    focus::{Navigation, cycle_focus_flat},
-    *,
-};
+use crate::{action::ActionHandling, *};
 
 pub struct App {
     pub quit_on: Option<(KeyCode, KeyModifiers)>,
@@ -172,59 +169,6 @@ impl App {
         Ok(())
     }
 
-    /// Handles an action, processing it based on the application's context.
-    pub fn handle_action(&mut self, action: Action) -> io::Result<()> {
-        match action {
-            Action::Quit => self.should_quit = true,
-            Action::EmmitEvent(event) => {
-                if let Some(key_event) = event.as_key_event() {
-                    if self.should_quit(&key_event) {
-                        return Ok(());
-                    }
-                }
-
-                self.handle_crossterm_event(event)?;
-            }
-            Action::KeyInputs(key_inputs) => {
-                for (key, modifiers) in key_inputs {
-                    let mut key_event = KeyEvent {
-                        code: key,
-                        modifiers,
-                        kind: crossterm::event::KeyEventKind::Press,
-                        state: crossterm::event::KeyEventState::NONE,
-                    };
-                    if self.should_quit(&key_event) {
-                        return Ok(());
-                    }
-
-                    self.dispatch_key_event(key_event);
-                    key_event.kind = crossterm::event::KeyEventKind::Release;
-                    self.dispatch_key_event(key_event);
-                }
-            }
-            Action::FocusNext => {
-                if let Some((_, focus_weak)) = self.context.focus.clone() {
-                    if let Some((new_focus_id, new_focus_weak)) =
-                        cycle_focus_flat(focus_weak, None, Navigation::Next, true)
-                    {
-                        self.dispatch_node_focus_event(new_focus_id, new_focus_weak);
-                    }
-                }
-            }
-            Action::FocusPrevious => {
-                if let Some((_, focus_weak)) = self.context.focus.clone() {
-                    if let Some((new_focus_id, new_focus_weak)) =
-                        cycle_focus_flat(focus_weak, None, Navigation::Previous, true)
-                    {
-                        self.dispatch_node_focus_event(new_focus_id, new_focus_weak);
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     /// Checks if the application should quit based on the key event. Sets `self.should_quit` to
     /// true if the `quit_on` condition is met.
     pub fn should_quit(&mut self, event: &crossterm::event::KeyEvent) -> bool {
@@ -259,9 +203,9 @@ impl App {
 
         loop {
             dynamic_timeout = self.get_polling_timeout(last_event.elapsed());
+            let mut render = false;
 
             // Poll for events without blocking
-            let mut render = false;
             while crossterm::event::poll(dynamic_timeout)? {
                 let event = crossterm::event::read()?;
                 self.handle_crossterm_event(event)?;

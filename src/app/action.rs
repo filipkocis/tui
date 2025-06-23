@@ -1,8 +1,13 @@
 use std::collections::VecDeque;
 
-use crossterm::event::{KeyCode, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
+use crate::{
+    App, WeakNodeHandle,
+    focus::{Navigation, cycle_focus_flat},
+};
+
+#[derive(Debug, Clone)]
 /// This defines the actions that can be performed in the application.
 /// Actions are typically emmited in event handlers, and are processed by the application's main
 /// loop.
@@ -41,5 +46,67 @@ impl Actions {
     #[inline]
     pub fn emmit(&mut self, action: Action) {
         self.queue.push_back(action);
+    }
+}
+
+/// Implementing structs can handle actions in their context.
+pub trait ActionHandling {
+    /// Handles an action in the context of the application (the implementing struct).
+    fn handle_action(&mut self, action: Action) -> std::io::Result<()>;
+}
+
+impl ActionHandling for App {
+    fn handle_action(&mut self, action: Action) -> std::io::Result<()> {
+        match action {
+            Action::Quit => self.should_quit = true,
+            Action::EmmitEvent(event) => {
+                if let Some(key_event) = event.as_key_event() {
+                    if self.should_quit(&key_event) {
+                        return Ok(());
+                    }
+                }
+
+                self.handle_crossterm_event(event)?;
+            }
+            Action::KeyInputs(key_inputs) => {
+                for (key, modifiers) in key_inputs {
+                    let mut key_event = KeyEvent {
+                        code: key,
+                        modifiers,
+                        kind: crossterm::event::KeyEventKind::Press,
+                        state: crossterm::event::KeyEventState::NONE,
+                    };
+                    if self.should_quit(&key_event) {
+                        return Ok(());
+                    }
+
+                    self.dispatch_key_event(key_event);
+                    key_event.kind = crossterm::event::KeyEventKind::Release;
+                    self.dispatch_key_event(key_event);
+                }
+            }
+            Action::FocusNext => {
+                if let Some((_, focus_weak)) = self.context.focus.clone() {
+                    if let Some((new_focus_id, new_focus_weak)) =
+                        cycle_focus_flat(focus_weak, None, Navigation::Next, true)
+                    {
+                        self.dispatch_node_focus_event(new_focus_id, new_focus_weak);
+                    }
+                }
+            }
+            Action::FocusPrevious => {
+                if let Some((_, focus_weak)) = self.context.focus.clone() {
+                    if let Some((new_focus_id, new_focus_weak)) =
+                        cycle_focus_flat(focus_weak, None, Navigation::Previous, true)
+                    {
+                        self.dispatch_node_focus_event(new_focus_id, new_focus_weak);
+                    }
+                }
+            }
+
+            _ => todo!(),
+        }
+
+        Ok(())
     }
 }
