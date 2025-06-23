@@ -325,7 +325,7 @@ impl App {
             return;
         };
 
-        let Some((target, target_weak)) = path.first() else {
+        let Some((_, target_weak)) = path.first() else {
             return;
         };
 
@@ -335,6 +335,29 @@ impl App {
                 self.context.focus = Some((target_id, target_weak.clone()));
             }
         }
+
+        // Execute the event phases
+        self.execute_event_phases(event, path);
+    }
+
+    /// Executes the event phases (capture, target, bubble) for the given event and target node.
+    /// You must provide a path for the execution.
+    ///
+    /// # Usage
+    /// `path` must contain the target node as the **first element** and the root node as the
+    /// **last element**. It can be obtained using [`self.get_path_to`](Self::get_path_to).
+    ///
+    /// # Safety
+    /// No borrows of nodes in the path should be held while calling this method.
+    fn execute_event_phases(
+        &mut self,
+        event: Event,
+        path: Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>,
+    ) {
+        let (target, target_weak) = path
+            .first()
+            .expect("Path must contain at least the target node");
+        let target_id = target.borrow().id();
 
         // Create event handler context
         let mut context = Context::new(

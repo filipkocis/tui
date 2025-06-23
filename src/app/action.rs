@@ -2,8 +2,6 @@ use std::collections::VecDeque;
 
 use crossterm::event::{KeyCode, KeyModifiers};
 
-use crate::NodeId;
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 /// This defines the actions that can be performed in the application.
 /// Actions are typically emmited in event handlers, and are processed by the application's main
