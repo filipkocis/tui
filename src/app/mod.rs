@@ -185,42 +185,28 @@ impl App {
         false
     }
 
-    /// Calculates the dynamic polling timeout based on the time elapsed since the last event.
-    fn get_polling_timeout(&self, since_last: Duration) -> Duration {
-        let max_timeout = 0.1; // Maximum timeout for event polling in secs
-        let max_idle = 1.0; // Secs after which the max_timeout is applied
-
-        let elapsed_secs = since_last.as_secs_f32();
-        let dynamic_timeout_secs = (elapsed_secs / max_idle).powi(2).min(1.0) * max_timeout;
-        let dynamic_timeout = (dynamic_timeout_secs * 1000.0) as u64; // Convert to millis
-
-        Duration::from_millis(dynamic_timeout)
-    }
-
     /// Runs the main application loop.
     pub fn run(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
         self.should_resize = Some(self.viewport.screen);
 
-        let mut last_event = Instant::now();
-        let mut dynamic_timeout: Duration;
+        let mut dynamic_timeout = DynamicTimeout::new(0.1, 1.0);
 
         loop {
-            dynamic_timeout = self.get_polling_timeout(last_event.elapsed());
             let mut render = false;
 
             // Poll for events without blocking
-            while crossterm::event::poll(dynamic_timeout)? {
+            while crossterm::event::poll(dynamic_timeout.get())? {
                 let event = crossterm::event::read()?;
                 self.handle_crossterm_event(event)?;
-                last_event = Instant::now();
+                dynamic_timeout.update();
                 render = true;
             }
 
             // Drain the actions queue
             while let Some(action) = self.context.actions.queue.pop_front() {
                 self.handle_action(action)?;
-                last_event = Instant::now();
+                dynamic_timeout.update();
                 render = true;
             }
 
@@ -431,5 +417,44 @@ impl Drop for App {
         if self.raw {
             disable_raw_mode().expect("Failed to disable raw mode");
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+/// A dynamic timeout that adjusts based on the time elapsed since the last activity.
+/// If idle for too long, the timeout will be set to the maximum value, if the time since the last
+/// activity is less than `max_idle_secs`, the timeout will be dynamically computed.
+pub struct DynamicTimeout {
+    /// The maximum timeout duration in seconds
+    max_timeout_secs: f32,
+    /// The maximum idle time before the timeout is capped at `max_timeout_secs`
+    max_idle_secs: f32,
+    /// The last time of activity (not idle)
+    last_activity: Instant,
+}
+
+impl DynamicTimeout {
+    /// Creates a new `DynamicTimeout`
+    pub fn new(max_timeout_secs: f32, max_idle_secs: f32) -> Self {
+        Self {
+            max_timeout_secs,
+            max_idle_secs,
+            last_activity: Instant::now(),
+        }
+    }
+
+    /// Updates the timeout, marking the current time as the last activity.
+    pub fn update(&mut self) {
+        self.last_activity = Instant::now();
+    }
+
+    /// Returns the computed timeout duration.
+    pub fn get(&self) -> Duration {
+        let elapsed_secs = self.last_activity.elapsed().as_secs_f32();
+        let dynamic_timeout_secs =
+            (elapsed_secs / self.max_idle_secs).powi(2).min(1.0) * self.max_timeout_secs;
+        let dynamic_timeout_ms = (dynamic_timeout_secs * 1000.0) as u64; // Convert to millis
+
+        Duration::from_millis(dynamic_timeout_ms)
     }
 }
