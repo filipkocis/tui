@@ -3,8 +3,8 @@ use std::collections::VecDeque;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::{
-    App, WeakNodeHandle,
     focus::{Navigation, cycle_focus_flat},
+    *,
 };
 
 #[derive(Debug, Clone)]
@@ -24,6 +24,9 @@ pub enum Action {
     FocusNext,
     /// Focus the previous node
     FocusPrevious,
+    /// Focus a specific node
+    FocusNode(WeakNodeHandle),
+
 }
 
 #[derive(Debug, Default)]
@@ -103,8 +106,15 @@ impl ActionHandling for App {
                     }
                 }
             }
+            Action::FocusNode(node_weak) => {
+                let Some(node) = node_weak.upgrade() else {
+                    return Ok(());
+                };
 
-            _ => todo!(),
+                let node_id = node.borrow().id();
+                self.dispatch_node_focus_event(node_id, node_weak);
+            }
+
         }
 
         Ok(())

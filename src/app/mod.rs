@@ -341,7 +341,7 @@ impl App {
         // Set focus to target node on mouse down
         if let Some(mouse_event) = event.as_mouse_event() {
             if mouse_event.kind.is_down() {
-                self.context.focus = Some((target_id, target_weak.clone()));
+                self.dispatch_node_focus_event(target_id, target_weak.clone());
             }
         }
 

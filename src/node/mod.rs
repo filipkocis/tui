@@ -333,8 +333,7 @@ impl Node {
     /// Computes the node's canvas, combines them in a bottom-up direction. Should be called after
     /// finishing the size calculation process.
     ///
-    /// - `parent_position` is the start of this node's canvas.
-    /// - `parent_size` is the available parent's content size for this child to grow into.
+    /// - `parent_position` is the start of this node's canvas from the parent's perspective.
     pub fn calculate_canvas(&mut self, parent_position: Offset) {
         let offset_position = parent_position.add(self.style.offset);
         let content_position = offset_position.add_tuple((

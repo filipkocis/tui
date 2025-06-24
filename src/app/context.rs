@@ -9,7 +9,7 @@ pub struct AppContext {
     /// Current node with focus. Set on mouse down event, before the event is dispatched.
     /// Should be changed manually to implement more complex focus logic.    
     /// Initially set to the root node.
-    pub focus: Option<(NodeId, WeakNodeHandle)>,
+    pub(crate) focus: Option<(NodeId, WeakNodeHandle)>,
 
     /// TODO: this one has no use yet
     pub hover: Option<WeakNodeHandle>,
@@ -36,6 +36,12 @@ impl AppContext {
     #[inline]
     pub fn emmit(&mut self, action: Action) {
         self.actions.emmit(action);
+    }
+
+    /// The current focus node.
+    #[inline]
+    pub fn focus(&self) -> &Option<(NodeId, WeakNodeHandle)> {
+        &self.focus
     }
 }
 
