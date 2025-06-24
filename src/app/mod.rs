@@ -169,9 +169,13 @@ impl App {
         Ok(())
     }
 
-    /// Checks if the application should quit based on the key event. Sets `self.should_quit` to
-    /// true if the `quit_on` condition is met.
+    /// Checks if the app should quit based on the key event, or if `self.should_quit == true`.
+    /// Sets `self.should_quit` to true if the `quit_on` condition is met.
     pub fn should_quit(&mut self, event: &crossterm::event::KeyEvent) -> bool {
+        if self.should_quit {
+            return true;
+        }
+
         if let Some((code, modifiers)) = self.quit_on {
             if event.code == code && event.modifiers.contains(modifiers) {
                 self.should_quit = true;

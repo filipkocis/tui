@@ -62,15 +62,7 @@ impl ActionHandling for App {
     fn handle_action(&mut self, action: Action) -> std::io::Result<()> {
         match action {
             Action::Quit => self.should_quit = true,
-            Action::EmmitEvent(event) => {
-                if let Some(key_event) = event.as_key_event() {
-                    if self.should_quit(&key_event) {
-                        return Ok(());
-                    }
-                }
-
-                self.handle_crossterm_event(event)?;
-            }
+            Action::EmmitEvent(event) => self.handle_crossterm_event(event)?,
             Action::KeyInputs(key_inputs) => {
                 for (key, modifiers) in key_inputs {
                     let mut key_event = KeyEvent {
