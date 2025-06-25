@@ -1,5 +1,6 @@
 mod handle;
 pub mod text;
+pub mod utils;
 
 pub use handle::{NodeHandle, WeakNodeHandle};
 

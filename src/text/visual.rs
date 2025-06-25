@@ -1,6 +1,6 @@
 use unicode_width::UnicodeWidthStr;
 
-use crate::{Char, Code, Line};
+use crate::Code;
 
 use super::BufferLine;
 
