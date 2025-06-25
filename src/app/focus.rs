@@ -10,14 +10,18 @@ pub enum Navigation {
     Previous,
 }
 
-/// Returns the root node and its weak handle, stopping at `root_id` if provided and found.
+/// Returns the first parent node and its weak handle that does not match the predicate, or the top
+/// of the tree if no such parent is found. Returns `None` if the weak handle cannot be upgraded.
 ///
 /// # Safety
 /// If any nodes are borrowed mutably, this will not work correctly.
-pub fn get_root_stopping_at(
+pub fn get_parent_while<P>(
     weak: &WeakNodeHandle,
-    root_id: Option<NodeId>,
-) -> Option<(WeakNodeHandle, Rc<RefCell<Node>>)> {
+    predicate: P,
+) -> Option<(WeakNodeHandle, Rc<RefCell<Node>>)>
+where
+    P: Fn(&Node) -> bool,
+{
     let node = weak.upgrade()?;
     let node_borrow = node.try_borrow().ok()?;
 
@@ -30,11 +34,12 @@ pub fn get_root_stopping_at(
         let p_clone = p.clone();
         let p_borrow = p_clone.try_borrow().ok()?;
 
-        // we reached the root
-        if Some(p_borrow.id()) == root_id {
+        // if the predicate is not met, we stop here
+        if !predicate(&p_borrow) {
             parent = Some((p_weak, p));
             break;
         }
+
         match p_borrow
             .parent
             .as_ref()
@@ -75,7 +80,8 @@ pub fn cycle_focus_flat(
         focus.id()
     };
 
-    let (weak_container, container) = match get_root_stopping_at(&weak_focus, root_id) {
+    let not_root = |node: &Node| Some(node.id()) != root_id;
+    let (weak_container, container) = match get_parent_while(&weak_focus, not_root) {
         Some(container) => container,
         None => return None,
     };
