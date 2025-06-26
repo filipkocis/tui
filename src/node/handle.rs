@@ -21,6 +21,12 @@ impl WeakNodeHandle {
     pub fn upgrade(&self) -> Option<Rc<RefCell<Node>>> {
         self.inner().upgrade()
     }
+
+    /// `true` if `self` and `other` point to the same weak node.
+    #[inline]
+    pub fn is_equal(&self, other: &Self) -> bool {
+        Weak::ptr_eq(self.inner(), other.inner())
+    }
 }
 
 #[derive(Debug)]
@@ -37,6 +43,12 @@ impl NodeHandle {
     #[inline]
     pub fn weak(&self) -> WeakNodeHandle {
         WeakNodeHandle(Rc::downgrade(self.inner()))
+    }
+
+    /// `true` if `self` and `other` point to the same node.
+    #[inline]
+    pub fn is_equal(&self, other: &Self) -> bool {
+        Rc::ptr_eq(self.inner(), other.inner())
     }
 
     /// Returns the inner `Rc<RefCell<Node>>`, use with caution.
