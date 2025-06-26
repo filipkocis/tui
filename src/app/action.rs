@@ -4,6 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::{
     focus::{Navigation, cycle_focus_flat},
+    node::utils::get_parent_while,
     *,
 };
 
@@ -27,6 +28,11 @@ pub enum Action {
     /// Focus a specific node
     FocusNode(WeakNodeHandle),
 
+    /// Recompute fully a node and it's children, then render the full tree.
+    /// # Note
+    /// Recomputing will start from the first **non-auto** sized node, so it may recompute more than
+    /// just the node itself.
+    RecomputeNode(WeakNodeHandle),
 }
 
 #[derive(Debug, Default)]
@@ -129,7 +135,35 @@ impl ActionHandling for App {
                 let node_id = node.borrow().id();
                 self.dispatch_node_focus_event(node_id, node_weak);
             }
+            Action::RecomputeNode(node_weak) => {
+                let not_auto_sized = |node: &Node| {
+                    !node.style.size.width.is_auto() && !node.style.size.height.is_auto()
+                };
 
+                let Some(mut node) = node_weak.upgrade() else {
+                    return Ok(());
+                };
+
+                let node_borrow = node.borrow();
+                let should_get_parent = node_borrow.cache().style.size != node_borrow.style.size
+                    || !not_auto_sized(&node_borrow);
+                drop(node_borrow);
+
+                // If the node is auto-sized or has changed size, we take a parent node
+                if should_get_parent {
+                    // SAFETY: `None` is not possible as `node_weak` is guaranteed to be valid
+                    node = get_parent_while(&node_weak, not_auto_sized)
+                        .expect("Parent should exist")
+                        .1;
+                }
+
+                let mut node = node.borrow_mut();
+                let cached_parent_position = node.cache().parent_position;
+                let cached_parent_available_size = node.cache().parent_available_size;
+
+                node.compute(cached_parent_position, cached_parent_available_size);
+                self.should_render = true;
+            }
         }
 
         Ok(())
