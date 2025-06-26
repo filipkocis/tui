@@ -1,7 +1,7 @@
 use crossterm::event::KeyCode;
 
 use crate::{
-    Context, Node,
+    Action, Context, Node,
     text::{BufferLine, Text},
 };
 
@@ -26,28 +26,38 @@ impl Input {
         };
 
         let handler = move |c: &mut Context, node: &mut Node| {
+            let mut stop_propagation = false;
+
             if let Some(paste) = c.event.as_paste_event() {
                 // TODO implement auto splitting of lines in [`TextInput`] or [`Text`]
                 input.add_string(paste, node);
-                input.process_text(node);
+                stop_propagation = true;
             }
 
             let Some(key_event) = c.event.as_key_event() else {
-                return false;
+                if stop_propagation {
+                    input.process_text(node);
+                    c.app.emmit(Action::RecomputeNode(c.self_weak.clone()));
+                }
+                return stop_propagation;
             };
 
             if key_event.code == KeyCode::Enter {
                 input.add_new_line(node);
-                input.process_text(node);
+                stop_propagation = true;
             }
 
             if key_event.code == KeyCode::Backspace {
                 input.remove_char(node);
-                input.process_text(node);
+                stop_propagation = true;
             }
 
             let Some(char) = key_event.code.as_char() else {
-                return false;
+                if stop_propagation {
+                    input.process_text(node);
+                    c.app.emmit(Action::RecomputeNode(c.self_weak.clone()));
+                }
+                return stop_propagation;
             };
 
             if char.is_control() || char.is_ascii_control() {
@@ -61,6 +71,7 @@ impl Input {
             }
 
             input.process_text(node);
+            c.app.emmit(Action::RecomputeNode(c.self_weak.clone()));
             true
         };
 
@@ -163,7 +174,7 @@ impl Input {
             node.text = self.placeholder.clone().into();
             self.cursor = (0, 0);
         } else {
-            node.text.prepare_text(u16::MAX);
+            // node.text.prepare_text(u16::MAX);
         }
 
         node.text.cursor = Some((self.cursor.0 as u16, self.cursor.1 as u16));
