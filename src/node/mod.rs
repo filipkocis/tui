@@ -73,6 +73,20 @@ pub struct Node {
     // pub focused: bool,
     // pub hovered: bool,
     canvas: Canvas,
+    /// Cached data for the node, used for optimizations. Do **NOT** mutate this directly.
+    /// To get a reference use [`Node::cache`].
+    cache: NodeCache,
+}
+
+#[derive(Debug, Default, Clone)]
+/// Cached data for the node, used to optimize rendering, computation, and event handling.
+pub struct NodeCache {
+    /// Latest arg for [`Node::calculate_percentage_size`]
+    pub parent_position: Offset,
+    /// Latest arg for [`Node::calculate_canvas`]
+    pub parent_available_size: Size,
+    /// Latest style used for the node's canvas, at [`Node::calculate_canvas`]
+    pub style: Style,
 }
 
 impl Node {
@@ -85,6 +99,12 @@ impl Node {
     #[inline]
     pub fn id(&self) -> NodeId {
         self.id
+    }
+
+    /// Get a reference to the node's [`cache`](NodeCache).
+    #[inline]
+    pub fn cache(&self) -> &NodeCache {
+        &self.cache
     }
 
     /// Returns whether absolute position `X, Y` is within the node's canvas. Does not check it's
@@ -222,6 +242,8 @@ impl Node {
     /// # Note
     /// Clamps the size
     pub fn calculate_percentage_size(&mut self, parent_available_size: Size) {
+        self.cache.parent_available_size = parent_available_size;
+
         // Calculate the size of this node
         self.style
             .compute_percentage_size(parent_available_size, &mut self.text);
@@ -336,6 +358,9 @@ impl Node {
     ///
     /// - `parent_position` is the start of this node's canvas from the parent's perspective.
     pub fn calculate_canvas(&mut self, parent_position: Offset) {
+        self.cache.style = self.style.clone();
+        self.cache.parent_position = parent_position;
+
         let offset_position = parent_position.add(self.style.offset);
         let content_position = offset_position.add_tuple((
             self.style.padding.left as i16 + self.style.border.2 as i16,
@@ -508,35 +533,6 @@ impl Node {
             .borrow_mut()
             .handle(ctx, self, is_capturing)
     }
-
-    // /// Propagate event down to children.
-    // pub fn propagate_event(&mut self, event: &Event) {
-    //     let handled = self.handlers.clone().borrow_mut().handle(self, event, true);
-    //
-    //     if !handled {
-    //         for child in &self.children {
-    //             let mut child = child.borrow_mut();
-    //             child.propagate_event(event);
-    //         }
-    //     }
-    // }
-    //
-    // /// Bubble event up to the root node.
-    // pub fn bubble_event(&mut self, event: &Event) {
-    //     let handled = self
-    //         .handlers
-    //         .clone()
-    //         .borrow_mut()
-    //         .handle(self, event, false);
-    //
-    //     if !handled {
-    //         if let Some(ref parent) = self.parent {
-    //             parent.upgrade().map(|parent| {
-    //                 parent.borrow_mut().bubble_event(event);
-    //             });
-    //         }
-    //     }
-    // }
 
     #[inline]
     pub fn add_handler<F: IntoEventHandler>(&mut self, handler: F, is_capturing: bool) {
