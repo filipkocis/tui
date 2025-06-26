@@ -1,6 +1,6 @@
 use crossterm::event::{KeyModifiers, MouseEventKind};
 
-use crate::{Context, IntoEventHandler, Node};
+use crate::{Action, Context, IntoEventHandler, Node};
 
 #[derive(Debug, Clone)]
 /// Synthetic event for left-click mouse drag events.
@@ -87,7 +87,7 @@ impl Draggable {
     ) -> Node {
         let mut node = Node::default();
 
-        let on_drag = move |_: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
+        let on_drag = move |c: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
 
             if drag_event.modifiers != modifiers {
@@ -105,6 +105,8 @@ impl Draggable {
                     return result;
                 }
             }
+
+            c.app.emmit(Action::RecomputeNode(c.self_weak.clone()));
 
             node.style.offset = node
                 .style
