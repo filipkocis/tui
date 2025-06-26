@@ -229,7 +229,7 @@ impl App {
         let mut path = Vec::new();
 
         if self.root.borrow().build_path_to_node(id, &mut path) {
-            path.push((self.root.0.clone(), self.root.weak()));
+            path.push((self.root.inner().clone(), self.root.weak()));
             Some(path)
         } else {
             None

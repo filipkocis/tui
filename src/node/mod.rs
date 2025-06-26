@@ -185,7 +185,7 @@ impl Node {
     #[inline]
     pub fn add_child(&mut self, child: NodeHandle, parent: WeakNodeHandle) {
         assert_eq!(
-            Rc::strong_count(&child.0),
+            Rc::strong_count(child.inner()),
             1,
             "Child node must not be shared, it must be unique to this parent"
         );
@@ -558,7 +558,7 @@ impl Node {
 
         for child in &self.children {
             if child.borrow().build_path_to_node(id, path) {
-                path.push((child.0.clone(), child.weak()));
+                path.push((child.inner().clone(), child.weak()));
                 return true;
             }
         }
