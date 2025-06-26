@@ -58,6 +58,29 @@ pub trait ActionHandling {
     fn handle_action(&mut self, action: Action) -> std::io::Result<()>;
 }
 
+impl App {
+    /// Handles all actions in the queue.
+    pub fn handle_actions(&mut self) -> std::io::Result<()> {
+        let mut recomputed = Vec::<WeakNodeHandle>::new();
+
+        for action in self.context.actions.queue.drain(..).collect::<Vec<_>>() {
+            match &action {
+                Action::RecomputeNode(weak) => {
+                    if recomputed.iter().any(|r| r.is_equal(weak)) {
+                        continue; // Already recomputed this node
+                    }
+                    recomputed.push(weak.clone());
+                }
+                _ => {}
+            }
+
+            self.handle_action(action)?
+        }
+
+        Ok(())
+    }
+}
+
 impl ActionHandling for App {
     fn handle_action(&mut self, action: Action) -> std::io::Result<()> {
         match action {
