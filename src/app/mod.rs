@@ -24,7 +24,7 @@ use crossterm::{
     terminal::{LeaveAlternateScreen, disable_raw_mode},
 };
 
-use crate::{action::ActionHandling, *};
+use crate::*;
 
 pub struct App {
     pub quit_on: Option<(KeyCode, KeyModifiers)>,
@@ -38,6 +38,9 @@ pub struct App {
 
     context: AppContext,
     should_resize: Option<(u16, u16)>,
+    should_compute: bool,
+    should_render: bool,
+    should_draw: bool,
     should_quit: bool,
 }
 
@@ -72,6 +75,9 @@ impl App {
 
             context,
             should_resize: None,
+            should_compute: false,
+            should_render: false,
+            should_draw: false,
             should_quit: false,
         }
     }
@@ -97,7 +103,7 @@ impl App {
         Ok(())
     }
 
-    /// Recomputes and renders the application based on `self.should_resize`.
+    /// Prepares the application for resizing, causes full recompute of the layout
     pub fn resize(&mut self) -> io::Result<()> {
         let Some((width, height)) = self.should_resize.take() else {
             return Ok(());
@@ -109,21 +115,55 @@ impl App {
         self.canvas = Canvas::new(width as usize, height as usize);
         self.hitmap.resize(width, height);
 
+        self.should_compute = true;
+        Ok(())
+    }
+
+    /// Recomputes the application layout if `self.should_compute` is true. Causes a full render
+    pub fn compute(&mut self) -> io::Result<()> {
+        if !self.should_compute {
+            return Ok(());
+        }
+        self.should_compute = false;
+
+        let (width, height) = self.viewport.screen;
+
         self.root
             .borrow_mut()
             .compute(Offset::default(), Size::from_cells(width, height));
-        self.render()
+
+        self.should_render = true;
+        Ok(())
     }
 
-    /// Renders the application to the terminal.
+    /// Renders the application to the canvas and hitmap if `self.should_render` is true. Causes a
+    /// full redraw
     pub fn render(&mut self) -> io::Result<()> {
+        if !self.should_render {
+            return Ok(());
+        }
+        self.should_render = false;
+
         self.root
             .borrow()
             .render_to(self.viewport, &mut self.canvas, &mut self.hitmap);
         self.canvas.prune_redundant_codes();
+
+        self.should_draw = true;
+        Ok(())
+    }
+
+    /// Draws the application to the terminal if `self.should_draw` is true.
+    pub fn draw(&mut self) -> io::Result<()> {
+        if !self.should_draw {
+            return Ok(());
+        }
+        self.should_draw = false;
+
         self.canvas.render()?;
         // self.hitmap.debug_render();
         self.move_cursor_to_focus()?;
+
         Ok(())
     }
 
@@ -155,7 +195,7 @@ impl App {
             CEvent::Key(key_event) => self.dispatch_key_event(key_event),
             CEvent::Mouse(mouse_event) => {
                 self.dispatch_mouse_event(mouse_event);
-                self.should_resize = Some(self.viewport.screen); // just for debug, remove later
+                // self.should_resize = Some(self.viewport.screen); // just for debug, remove later
             }
             CEvent::Resize(width, height) => {
                 self.should_resize = Some((width, height));
@@ -193,21 +233,17 @@ impl App {
         let mut dynamic_timeout = DynamicTimeout::new(0.1, 1.0);
 
         loop {
-            let mut render = false;
-
             // Poll for events without blocking
             while crossterm::event::poll(dynamic_timeout.get())? {
                 let event = crossterm::event::read()?;
                 self.handle_crossterm_event(event)?;
                 dynamic_timeout.update();
-                render = true;
             }
 
             // Drain the actions queue
-            while let Some(action) = self.context.actions.queue.pop_front() {
-                self.handle_action(action)?;
+            if !self.context.actions.queue.is_empty() {
+                self.handle_actions()?;
                 dynamic_timeout.update();
-                render = true;
             }
 
             // Check if we should quit
@@ -215,11 +251,11 @@ impl App {
                 return Ok(());
             }
 
-            timed(|| self.resize())?;
+            self.resize()?;
+            self.compute()?;
 
-            if render {
-                timed(|| self.render())?;
-            }
+            self.render()?;
+            self.draw()?;
         }
     }
 
