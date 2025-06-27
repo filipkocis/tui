@@ -1,6 +1,7 @@
 mod app;
 mod canvas;
 mod char;
+pub mod color;
 mod elements;
 mod handler;
 mod line;
@@ -11,6 +12,7 @@ pub mod text;
 pub use app::*;
 pub use canvas::Canvas;
 pub use char::{Char, Code};
+pub use color::{Hsl, Oklch};
 pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use line::Line;
