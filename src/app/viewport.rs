@@ -17,3 +17,9 @@ impl Viewport {
         }
     }
 }
+
+impl Default for Viewport {
+    fn default() -> Self {
+        Self::new()
+    }
+}
