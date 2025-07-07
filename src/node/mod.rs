@@ -90,6 +90,8 @@ pub struct NodeCache {
     pub parent_available_size: Size,
     /// Latest style used for the node's canvas, at [`Node::calculate_canvas`]
     pub style: Style,
+    /// Latest viewport used for rendering the node, at [`Node::render_to`]
+    pub viewport: Viewport,
 }
 
 impl Node {
@@ -444,6 +446,8 @@ impl Node {
     /// Render the node and its children to `canvas` within the given `viewport`. Node's canvas has to be
     /// computed before calling this function.
     pub fn render_to(&self, mut viewport: Viewport, canvas: &mut Canvas, hitmap: &mut HitMap) {
+        self.cache_mut().viewport = viewport;
+
         let is_absolute = self.style.offset.is_absolute();
 
         viewport.min = if is_absolute {
