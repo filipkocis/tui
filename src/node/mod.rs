@@ -4,7 +4,10 @@ pub mod utils;
 
 pub use handle::{NodeHandle, WeakNodeHandle};
 
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Ref, RefCell, RefMut},
+    rc::Rc,
+};
 
 use crate::{
     Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
@@ -75,7 +78,7 @@ pub struct Node {
     canvas: Canvas,
     /// Cached data for the node, used for optimizations. Do **NOT** mutate this directly.
     /// To get a reference use [`Node::cache`].
-    cache: NodeCache,
+    cache: RefCell<NodeCache>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -103,8 +106,14 @@ impl Node {
 
     /// Get a reference to the node's [`cache`](NodeCache).
     #[inline]
-    pub fn cache(&self) -> &NodeCache {
-        &self.cache
+    pub fn cache(&self) -> Ref<NodeCache> {
+        self.cache.borrow()
+    }
+
+    /// Get a mutable reference to the node's [`cache`](NodeCache).
+    #[inline]
+    pub(crate) fn cache_mut(&self) -> RefMut<NodeCache> {
+        self.cache.borrow_mut()
     }
 
     /// Returns whether absolute position `X, Y` is within the node's canvas. Does not check it's
@@ -242,7 +251,7 @@ impl Node {
     /// # Note
     /// Clamps the size
     pub fn calculate_percentage_size(&mut self, parent_available_size: Size) {
-        self.cache.parent_available_size = parent_available_size;
+        self.cache_mut().parent_available_size = parent_available_size;
 
         // Calculate the size of this node
         self.style
@@ -358,8 +367,8 @@ impl Node {
     ///
     /// - `parent_position` is the start of this node's canvas from the parent's perspective.
     pub fn calculate_canvas(&mut self, parent_position: Offset) {
-        self.cache.style = self.style.clone();
-        self.cache.parent_position = parent_position;
+        self.cache_mut().style = self.style.clone();
+        self.cache_mut().parent_position = parent_position;
 
         let offset_position = parent_position.add(self.style.offset);
         let content_position = offset_position.add_tuple((
