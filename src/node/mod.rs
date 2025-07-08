@@ -84,9 +84,9 @@ pub struct Node {
 #[derive(Debug, Default, Clone)]
 /// Cached data for the node, used to optimize rendering, computation, and event handling.
 pub struct NodeCache {
-    /// Latest arg for [`Node::calculate_percentage_size`]
-    pub parent_position: Offset,
     /// Latest arg for [`Node::calculate_canvas`]
+    pub parent_position: Offset,
+    /// Latest arg for [`Node::calculate_percentage_size`]
     pub parent_available_size: Size,
     /// Latest style used for the node's canvas, at [`Node::calculate_canvas`]
     pub style: Style,
