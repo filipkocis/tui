@@ -1,4 +1,5 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Node offset in the layout tree.
 pub enum Offset {
     /// Absolute offset in screen space
     Absolute(i16, i16),
@@ -27,7 +28,7 @@ impl Offset {
         }
     }
 
-    /// Returns wheter the node should be absolutely positioned
+    /// Returns whether the node should be absolutely positioned
     #[inline(always)]
     pub fn is_absolute(&self) -> bool {
         match self {
@@ -83,6 +84,17 @@ impl Offset {
             Self::Translate(x, y) => Self::Translate(x + nx, y + ny),
             Self::AbsolutelyRelative(x, y) => Self::AbsolutelyRelative(x + nx, y + ny),
             Self::Absolute(x, y) => Self::Absolute(x + nx, y + ny),
+        }
+    }
+
+    /// True if the two offsets are of the same type, ignoring the values.
+    #[inline(always)]
+    pub fn type_eq(self, other: Self) -> bool {
+        match (self, other) {
+            (Self::Absolute(..), Self::Absolute(..)) => true,
+            (Self::AbsolutelyRelative(..), Self::AbsolutelyRelative(..)) => true,
+            (Self::Translate(..), Self::Translate(..)) => true,
+            _ => false,
         }
     }
 }
