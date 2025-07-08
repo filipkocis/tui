@@ -92,6 +92,8 @@ pub struct NodeCache {
     pub style: Style,
     /// Latest viewport used for rendering the node, at [`Node::render_to`]
     pub viewport: Viewport,
+    /// Latest canvas position, computed at [`Node::calculate_canvas`]
+    pub canvas_position: (i16, i16),
 }
 
 impl Node {
@@ -382,6 +384,7 @@ impl Node {
             position: offset_position.tuple(),
             buffer: vec![],
         };
+        self.cache_mut().canvas_position = canvas.position;
 
         // Add text (before children)
         canvas.add_text(&self.text, self.style.size);
