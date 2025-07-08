@@ -5,6 +5,9 @@ use crate::{Node, WeakNodeHandle};
 /// Returns the first parent node and its weak handle that does not match the predicate, or the top
 /// of the tree if no such parent is found. Returns `None` if the weak handle cannot be upgraded.
 ///
+/// # Note
+/// If `predicate` returns `false` for the `weak` node, it will return itself.
+///
 /// # Safety
 /// If any nodes are borrowed mutably, this will not work correctly.
 pub fn get_parent_while<P>(
@@ -15,12 +18,7 @@ where
     P: Fn(&Node) -> bool,
 {
     let node = weak.upgrade()?;
-    let node_borrow = node.try_borrow().ok()?;
-
-    let mut parent = node_borrow
-        .parent
-        .as_ref()
-        .and_then(|p| p.upgrade().map(|n| (p.clone(), n)));
+    let mut parent = Some((weak.clone(), node));
 
     while let Some((p_weak, p)) = parent.take() {
         let p_clone = p.clone();
@@ -47,6 +45,8 @@ where
         }
     }
 
-    drop(node_borrow);
-    Some(parent.unwrap_or((weak.clone(), node)))
+    unsafe {
+        // Parent is guaranteed to be `Some`
+        Some(parent.unwrap_unchecked())
+    }
 }
