@@ -338,6 +338,12 @@ impl Canvas {
             return; // Outside of the viewport
         }
 
+        debug_assert!(
+            (y as usize) < self.buffer.len(),
+            "Y position ({y}) is out of bounds ({}), you probably used the incorrect viewport, cannot paste on top of the canvas",
+            self.buffer.len()
+        );
+
         let start = (viewport.min.0 as i16 - x).max(0) as usize;
         let take = viewport.max.0.saturating_sub(viewport.min.0) as usize;
         let line = line.cutout(start, take);
