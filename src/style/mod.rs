@@ -193,6 +193,12 @@ impl Style {
             .computed_size()
             .saturating_add(self.extra_height())
     }
+
+    /// Total computed width and height
+    #[inline]
+    pub fn total_size(&self) -> (u16, u16) {
+        (self.total_width(), self.total_height())
+    }
 }
 
 impl Size {
