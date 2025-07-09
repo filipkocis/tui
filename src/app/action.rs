@@ -172,7 +172,8 @@ impl ActionHandling for App {
                 node.compute(cached_parent_position, cached_parent_available_size);
 
                 // If the node is absolute, we need to adjust the viewport in case it has moved
-                if node.style.offset.is_absolute() {
+                // If it's relative, we cap the new viewport to the parent's content size.
+                {
                     let (x, y) = node.absolute_position();
                     let (cache_x, cache_y) = cached_position;
                     let (screen_x, screen_y) = self.context.screen_size;
@@ -195,9 +196,23 @@ impl ActionHandling for App {
                     // Grab the largest `max` span for the viewport
                     cached_viewport.max.0 = new_max.0.max(old_max.0).min(screen_x);
                     cached_viewport.max.1 = new_max.1.max(old_max.1).min(screen_y);
+
+                    // Cap the viewport to the parent's available content size
+                    if node.style.offset.is_translate() {
+                        let min = cached_parent_position.tuple();
+                        let max = (
+                            min.0 + cached_parent_available_size.tuple().0 as i16,
+                            min.1 + cached_parent_available_size.tuple().1 as i16,
+                        );
+                        cached_viewport.min.0 = cached_viewport.min.0.max(min.0.max(0) as u16);
+                        cached_viewport.min.1 = cached_viewport.min.1.max(min.1.max(0) as u16);
+                        cached_viewport.max.0 = cached_viewport.max.0.min(max.0.max(0) as u16);
+                        cached_viewport.max.1 = cached_viewport.max.1.min(max.1.max(0) as u16);
+                    }
                 }
 
-                // Render the tree using the minimal viewport
+                // Render the tree using the minimal viewport or the cached viewport which is the
+                // parent's content size.
                 drop(node);
                 self.root
                     .borrow()
