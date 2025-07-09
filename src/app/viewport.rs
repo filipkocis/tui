@@ -16,6 +16,13 @@ impl Viewport {
             screen: (width, height),
         }
     }
+
+    pub fn debug_render(&self) {
+        let mut hitmap = crate::HitMap::new(self.screen.0 as usize, self.screen.1 as usize);
+
+        hitmap.add_target_area(crate::NodeId::new_from(1), self);
+        hitmap.debug_render();
+    }
 }
 
 impl Default for Viewport {

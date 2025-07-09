@@ -6,6 +6,7 @@ pub struct HitMap {
 }
 
 impl HitMap {
+    /// Creates a new hitmap with the specified width and height.
     pub fn new(width: usize, height: usize) -> Self {
         let mut map = Vec::with_capacity(height);
 
