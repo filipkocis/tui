@@ -28,10 +28,10 @@ pub enum Action {
     /// Focus a specific node
     FocusNode(WeakNodeHandle),
 
-    /// Recompute fully a node and it's children, then render the full tree.
+    /// Recompute a node and it's children, then re-render the full tree using a minimal viewport.
     /// # Note
-    /// Recomputing will start from the first **non-auto** sized node, so it may recompute more than
-    /// just the node itself.
+    /// Recomputing starts with the first node (parent) that is not auto-sized, and does not have
+    /// changed fields which might affect the layout (e.g. size, offset).
     RecomputeNode(WeakNodeHandle),
 }
 
@@ -136,33 +136,73 @@ impl ActionHandling for App {
                 self.dispatch_node_focus_event(node_id, node_weak);
             }
             Action::RecomputeNode(node_weak) => {
-                let not_auto_sized = |node: &Node| {
-                    !node.style.size.width.is_auto() && !node.style.size.height.is_auto()
+                // True if the node is auto-sized, has changed size, or changed offset type.
+                // Always false if the node is and was absolute, since that does not affect the
+                // parent.
+                let get_parent_predicate = |node: &Node| {
+                    let auto_sized =
+                        node.style.size.width.is_auto() || node.style.size.height.is_auto();
+                    let changed_size = node.cache().style.size != node.style.size;
+                    let changed_offset_type = !node.cache().style.offset.type_eq(node.style.offset);
+
+                    let was_absolute = node.cache().style.offset.is_absolute();
+                    let is_absolute = node.style.offset.is_absolute();
+
+                    if was_absolute && is_absolute {
+                        // If the node was and is absolute, don't get the parent
+                        return false;
+                    }
+
+                    // If the node is auto-sized, has changed size, or changed offset type
+                    auto_sized || changed_size || changed_offset_type
                 };
 
-                let Some(mut node) = node_weak.upgrade() else {
+                let Some((_, node)) = get_parent_while(&node_weak, get_parent_predicate) else {
                     return Ok(());
                 };
-
-                let node_borrow = node.borrow();
-                let should_get_parent = node_borrow.cache().style.size != node_borrow.style.size
-                    || !not_auto_sized(&node_borrow);
-                drop(node_borrow);
-
-                // If the node is auto-sized or has changed size, we take a parent node
-                if should_get_parent {
-                    // SAFETY: `None` is not possible as `node_weak` is guaranteed to be valid
-                    node = get_parent_while(&node_weak, not_auto_sized)
-                        .expect("Parent should exist")
-                        .1;
-                }
 
                 let mut node = node.borrow_mut();
                 let cached_parent_position = node.cache().parent_position;
                 let cached_parent_available_size = node.cache().parent_available_size;
+                let cached_position = node.cache().canvas_position;
+                let cached_size = node.cache().style.total_size();
+                let mut cached_viewport = node.cache().viewport;
 
+                // Compute the tree starting from `node`
                 node.compute(cached_parent_position, cached_parent_available_size);
-                self.should_render = true;
+
+                // If the node is absolute, we need to adjust the viewport in case it has moved
+                if node.style.offset.is_absolute() {
+                    let (x, y) = node.absolute_position();
+                    let (cache_x, cache_y) = cached_position;
+                    let (screen_x, screen_y) = self.context.screen_size;
+
+                    // Grab the smallest `min` position for the viewport
+                    cached_viewport.min.0 = (x.min(cache_x).max(0) as u16).min(screen_x);
+                    cached_viewport.min.1 = (y.min(cache_y).max(0) as u16).min(screen_y);
+
+                    // Compute new and old max positions (pos + size)
+                    let size = node.style.total_size();
+                    let new_max = (
+                        (x + size.0 as i16).max(0) as u16,
+                        (y + size.1 as i16).max(0) as u16,
+                    );
+                    let old_max = (
+                        (cache_x + cached_size.0 as i16).max(0) as u16,
+                        (cache_y + cached_size.1 as i16).max(0) as u16,
+                    );
+
+                    // Grab the largest `max` span for the viewport
+                    cached_viewport.max.0 = new_max.0.max(old_max.0).min(screen_x);
+                    cached_viewport.max.1 = new_max.1.max(old_max.1).min(screen_y);
+                }
+
+                // Render the tree using the minimal viewport
+                drop(node);
+                self.root
+                    .borrow()
+                    .render_to(cached_viewport, &mut self.canvas, &mut self.hitmap);
+                self.should_draw = true;
             }
         }
 
