@@ -52,9 +52,13 @@ impl App {
     pub fn register_panic_hook() {
         let hook = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |panic_info| {
+            while crossterm::event::poll(Duration::from_millis(0)).unwrap_or_default() {
+                let _ = crossterm::event::read();
+            }
+
             // Cleanup terminal state
-            let _ = disable_raw_mode();
             let _ = execute!(io::stdout(), LeaveAlternateScreen);
+            let _ = disable_raw_mode();
 
             // Call the original panic hook
             hook(panic_info);
