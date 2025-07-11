@@ -1,4 +1,4 @@
-use crate::{Context, Node, SizeValue};
+use crate::{Action, Context, Node, SizeValue};
 
 use super::{MouseDragEvent, OnDragResult, on_drag_handler};
 
@@ -8,7 +8,7 @@ impl Resizable {
     pub fn new(allow_x_resize: bool, allow_y_resize: bool) -> Node {
         let mut node = Node::default();
 
-        let on_drag = move |_: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
+        let on_drag = move |ctx: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
 
             if !allow_x_resize && !allow_y_resize {
@@ -39,6 +39,7 @@ impl Resizable {
                 let new_width = (content_width as i16 + drag_event.delta.0).max(0) as u16;
                 node.style.size.width = SizeValue::cells(new_width);
                 result.update_hold_x = true;
+                result.stop_propagation = true;
             }
 
             if drag_y && allow_y_resize {
@@ -46,9 +47,13 @@ impl Resizable {
                 let new_height = (content_height as i16 + drag_event.delta.1).max(0) as u16;
                 node.style.size.height = SizeValue::cells(new_height);
                 result.update_hold_y = true;
+                result.stop_propagation = true;
             }
 
-            result.stop_propagation = true;
+            if result.stop_propagation {
+                ctx.app.emmit(Action::RecomputeNode(ctx.self_weak.clone()));
+            }
+
             result
         };
         node.add_handler(on_drag_handler(on_drag), true);
