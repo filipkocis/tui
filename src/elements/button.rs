@@ -10,11 +10,11 @@ pub struct MouseClickEvent {
     pub modifiers: KeyModifiers,
 }
 
-pub type MouseClickHandler = Box<dyn FnMut(MouseClickEvent, &mut Node) -> bool>;
+pub type MouseClickHandler = Box<dyn FnMut(&mut Context, MouseClickEvent, &mut Node) -> bool>;
 
 /// Generates an event handler for a mouse click event.
 pub fn on_click_handler(
-    mut on_click: impl FnMut(MouseClickEvent, &mut Node) -> bool + 'static,
+    mut on_click: impl FnMut(&mut Context, MouseClickEvent, &mut Node) -> bool + 'static,
 ) -> impl IntoEventHandler {
     move |c: &mut Context, node: &mut Node| {
         let Some(mouse_event) = c.event.as_mouse_event() else {
@@ -35,7 +35,7 @@ pub fn on_click_handler(
             modifiers: mouse_event.modifiers,
         };
 
-        on_click(click_event, node)
+        on_click(c, click_event, node)
     }
 }
 

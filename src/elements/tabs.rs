@@ -1,7 +1,7 @@
 use crossterm::style::Color;
 
 use crate::{
-    Code, Node, NodeHandle, Offset, Padding, Size, SizeValue,
+    Code, Context, Node, NodeHandle, Offset, Padding, Size, SizeValue,
     text::{StyleSpan, Text},
 };
 
@@ -84,7 +84,7 @@ impl Tabs {
             let bottom_line_weak = bottom_line_weak.clone();
             let build_line_text = build_line_text.clone();
 
-            let on_click = Box::new(move |_, _: &mut _| {
+            let on_click = Box::new(move |_: &mut Context, _, _: &mut _| {
                 if let Some(line) = bottom_line_weak.upgrade() {
                     let mut line = line.borrow_mut();
                     let (text, size) = build_line_text(i);
