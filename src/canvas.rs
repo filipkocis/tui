@@ -94,6 +94,10 @@ impl Canvas {
         };
 
         for line in &mut self.buffer {
+            if line.width() == 0 {
+                continue;
+            }
+
             line.set(0, StyledUnit::Code(Code::Background(color)));
             line.content
                 .push(StyledUnit::Code(Code::Background(Color::Reset)));
@@ -107,6 +111,10 @@ impl Canvas {
         };
 
         for line in &mut self.buffer {
+            if line.width() == 0 {
+                continue;
+            }
+
             line.set(0, StyledUnit::Code(Code::Foreground(color)));
             line.content
                 .push(StyledUnit::Code(Code::Foreground(Color::Reset)));
