@@ -35,6 +35,35 @@ pub enum Action {
     RecomputeNode(WeakNodeHandle),
 }
 
+impl Action {
+    /// Debug format but in a descriptive way, different from classic debug format
+    pub fn descriptive_format(&self) -> String {
+        fn node_id(weak: &WeakNodeHandle) -> String {
+            weak.upgrade()
+                .map(|n| n.try_borrow().map(|b| format!("{:?}", b.id())).ok())
+                .flatten()
+                .unwrap_or("NodeId(invalid)".into())
+        };
+
+        fn map_inputs(inputs: &[(KeyCode, KeyModifiers)]) -> Vec<String> {
+            inputs
+                .into_iter()
+                .map(|(k, m)| format!("{m}+{k}"))
+                .collect()
+        }
+
+        match self {
+            Self::Quit => "Quit".into(),
+            Self::EmmitEvent(e) => format!("EmmitEvent({e:?})"),
+            Self::KeyInputs(k) => format!("KeyInputs({:?})", map_inputs(k)),
+            Self::FocusNext => "FocusNext".into(),
+            Self::FocusPrevious => "FocusPrevious".into(),
+            Self::FocusNode(n) => format!("FocusNode({})", node_id(n)),
+            Self::RecomputeNode(n) => format!("RecomputeNode({})", node_id(n)),
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 /// Queue of actions to be processed by the application.
 /// Used inside the [app context](crate::AppContext).
