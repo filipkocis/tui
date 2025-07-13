@@ -8,8 +8,8 @@ pub struct Viewport {
 }
 
 impl Viewport {
-    pub fn new() -> Self {
-        let (width, height) = terminal::size().unwrap();
+    /// Creates a new viewport with `max` and `screen` set to `(width, height)`
+    pub fn new(width: u16, height: u16) -> Self {
         Self {
             min: (0, 0),
             max: (width, height),
@@ -26,7 +26,9 @@ impl Viewport {
 }
 
 impl Default for Viewport {
+    /// A default viewport set to the terminal size
     fn default() -> Self {
-        Self::new()
+        let (width, height) = terminal::size().unwrap();
+        Self::new(width, height)
     }
 }

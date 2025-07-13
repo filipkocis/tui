@@ -389,7 +389,7 @@ mod canvas {
 
     #[test]
     fn paste_eq_len_no_col() {
-        let vp = Viewport::new();
+        let vp = Viewport::default();
         let mut canvas = canvas(10, 10);
         let line = line_ch("a", 10);
 
@@ -403,7 +403,7 @@ mod canvas {
 
     #[test]
     fn paste_eq_start_no_col() {
-        let vp = Viewport::new();
+        let vp = Viewport::default();
         let mut canvas = canvas(10, 2);
         let line = line_ch("a", 5);
 
@@ -418,7 +418,7 @@ mod canvas {
 
     #[test]
     fn paste_middle() {
-        let vp = Viewport::new();
+        let vp = Viewport::default();
         let mut canvas = canvas(5, 1);
         // canvas.buffer[0] = line_ch(['a', 'b', 'c', 'd', 'e']);
 
