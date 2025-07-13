@@ -16,7 +16,7 @@ pub use color::{Hsl, Oklch};
 pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use line::Line;
-pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle};
+pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle, workers};
 pub use style::{Offset, Padding, Size, SizeValue, Style};
 
 pub use crossterm::{self};
