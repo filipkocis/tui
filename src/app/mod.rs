@@ -36,7 +36,7 @@ pub struct App {
     canvas: Canvas,
     viewport: Viewport,
 
-    context: AppContext,
+    pub(crate) context: AppContext,
     should_resize: Option<(u16, u16)>,
     should_compute: bool,
     should_render: bool,
@@ -73,6 +73,7 @@ impl App {
             raw: true,
             alternate: true,
             root,
+
             hitmap: HitMap::default(),
             canvas: Canvas::default(),
             viewport: Viewport::new(),
@@ -236,11 +237,19 @@ impl App {
 
         let mut dynamic_timeout = DynamicTimeout::new(0.1, 1.0);
 
+        // Init the worker channel
+        let receiver = workers::init_channel();
+
         loop {
-            // Poll for events without blocking
+            // Poll for events without blocking, using dynamic timeout
             while crossterm::event::poll(dynamic_timeout.get())? {
                 let event = crossterm::event::read()?;
                 self.handle_crossterm_event(event)?;
+                dynamic_timeout.update();
+            }
+
+            // Receive messages without blocking
+            if self.handle_messages(&receiver)? {
                 dynamic_timeout.update();
             }
 
@@ -261,6 +270,22 @@ impl App {
             self.render()?;
             self.draw()?;
         }
+    }
+
+
+    /// Find a node by its [`id`](NodeId), returns its `weak handle` if found in the tree.
+    /// The weak handle is guaranteed to be valid when returned
+    pub fn get_weak_by_id(&self, id: NodeId) -> Option<WeakNodeHandle> {
+        fn find_recursive(weak: WeakNodeHandle, node: &Node, id: NodeId) -> Option<WeakNodeHandle> {
+            if node.id() == id {
+                return Some(weak);
+            }
+
+            node.children
+                .iter()
+                .find_map(|n| find_recursive(n.weak(), &n.borrow(), id))
+        }
+        find_recursive(self.root.weak(), &self.root.borrow(), id)
     }
 
     /// Returns the path from the target node `id` to the root node.
