@@ -1,4 +1,4 @@
-mod message;
+pub mod message;
 
 pub use message::Message;
 
@@ -7,7 +7,7 @@ use std::{
     sync::{
         Arc, OnceLock,
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, Receiver, SendError, Sender},
+        mpsc::{self, Receiver, Sender},
     },
     thread::{self, JoinHandle},
 };
@@ -82,7 +82,7 @@ impl Workers {
         }
     }
 
-    // Start a new worker thread
+    /// Start a new worker thread
     pub fn start(&mut self, mut f: Box<dyn WorkerFn>) {
         let node_id = self.node_id;
         let context = WorkerContext {
@@ -102,7 +102,6 @@ impl Workers {
     }
 }
 
-// When Node is dropped, signal shutdown and optionally detach thread
 impl Drop for Workers {
     fn drop(&mut self) {
         // Signal the threads to stop

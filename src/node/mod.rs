@@ -11,7 +11,8 @@ use std::{
 
 use crate::{
     Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
-    text::Text, workers::Workers,
+    text::Text,
+    workers::{WorkerFn, Workers},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -261,6 +262,12 @@ impl Node {
 
         child.borrow_mut().parent = Some(parent);
         self.children.push(child);
+    }
+
+    /// Start a new worker thread
+    #[inline]
+    pub fn start_worker(&mut self, f: impl WorkerFn) {
+        self.workers.start(Box::new(f));
     }
 
     /// Computes the node's size and canvas. This should be called before

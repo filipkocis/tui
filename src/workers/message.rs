@@ -19,7 +19,10 @@ pub trait MessageHandling {
 
 impl App {
     /// Handles all messages in the channel. Returns `true` if any messages were handled
-    pub fn handle_messages(&mut self, receiver: &Receiver<InternalMessage>) -> std::io::Result<bool> {
+    pub fn handle_messages(
+        &mut self,
+        receiver: &Receiver<InternalMessage>,
+    ) -> std::io::Result<bool> {
         let mut handled = false;
 
         while let Ok(message) = receiver.try_recv() {
