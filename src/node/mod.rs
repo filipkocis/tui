@@ -456,12 +456,7 @@ impl Node {
             }
 
             // Add the child canvas to this node's canvas
-            canvas.extend_child(
-                &child.canvas,
-                &self.style,
-                include_gap,
-                i == 0,
-            );
+            canvas.extend_child(&child.canvas, &self.style, include_gap, i == 0);
 
             // Include gap after first child is seen
             include_gap = true;
