@@ -19,6 +19,7 @@ pub struct Canvas {
 }
 
 impl Canvas {
+    /// Creates a new empty canvas with a size of `(width, height)`
     pub fn new(width: usize, height: usize) -> Self {
         let mut buffer = Vec::with_capacity(height);
 
@@ -345,8 +346,15 @@ impl Canvas {
         }
 
         debug_assert!(
+            viewport.max.0 as usize <= self.width(),
+            "Viewport max X ({}) is out of width bounds ({}), you probably used the incorrect viewport, or did not resize the canvas properly, cannot paste on top of the canvas",
+            viewport.max.0,
+            self.width()
+        );
+
+        debug_assert!(
             (y as usize) < self.buffer.len(),
-            "Y position ({y}) is out of bounds ({}), you probably used the incorrect viewport, cannot paste on top of the canvas",
+            "Y position ({y}) is out of height bounds ({}), you probably used the incorrect viewport, or did not resize the canvas properly, cannot paste on top of the canvas",
             self.buffer.len()
         );
 
