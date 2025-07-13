@@ -66,8 +66,8 @@ impl App {
     }
 
     pub fn new(root: NodeHandle) -> Self {
-        let context = AppContext::new(&root);
         let (width, height) = crossterm::terminal::size().unwrap_or_default();
+        let context = AppContext::new(&root, (width, height));
 
         App {
             quit_on: Some((KeyCode::Char('c'), KeyModifiers::CONTROL)),
@@ -75,7 +75,7 @@ impl App {
             alternate: true,
             root,
 
-            hitmap: HitMap::default(),
+            hitmap: HitMap::new(width as usize, height as usize),
             canvas: Canvas::new(width as usize, height as usize),
             viewport: Viewport::new(width, height),
 

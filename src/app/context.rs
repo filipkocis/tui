@@ -22,12 +22,14 @@ pub struct AppContext {
 }
 
 impl AppContext {
-    pub fn new(root: &NodeHandle) -> Self {
+    /// Creates a new [`app`](crate::App) context with a default focused node `root` and a set
+    /// `screen_size`
+    pub fn new(root: &NodeHandle, screen_size: (u16, u16)) -> Self {
         Self {
             hold: None,
             focus: Some((root.borrow().id(), root.weak())),
             hover: None,
-            screen_size: (0, 0),
+            screen_size,
             actions: Actions::new(),
         }
     }
