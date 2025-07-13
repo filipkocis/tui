@@ -50,7 +50,7 @@ pub enum Message {
 }
 
 // static COM: (Sender<usize>, Receiver<usize>) = mpsc::channel();
-static WORKER_SENDER: OnceLock<Sender<Message>> = OnceLock::new();
+pub static WORKER_SENDER: OnceLock<Sender<Message>> = OnceLock::new();
 
 /// Initialize the [`channel`](mpsc) for threads, done automatically in [app](crate::App)
 /// # Panics
@@ -76,7 +76,7 @@ impl Workers {
         let handle = thread::spawn(move || {
             f(context);
 
-            // println!("Worker thread for node {:?} shutting down", node_id);
+            println!("Worker thread for node {:?} shutting down", node_id);
         });
 
         self.handles.push(handle);

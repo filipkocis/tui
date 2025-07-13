@@ -1,7 +1,6 @@
 mod handle;
 pub mod text;
 pub mod utils;
-pub mod workers;
 
 pub use handle::{NodeHandle, WeakNodeHandle};
 
@@ -9,11 +8,11 @@ use std::{
     cell::{Ref, RefCell, RefMut},
     rc::Rc,
 };
-use workers::Workers;
 
 use crate::{
     Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
     text::Text,
+    workers::Workers
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
