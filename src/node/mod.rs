@@ -11,7 +11,8 @@ use std::{
 
 use crate::{
     Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
-    WorkerContext, text::Text, workers::Workers,
+    text::Text,
+    workers::{WorkerFn, Workers},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -70,7 +71,7 @@ pub struct Node {
     /// Event handlers registered on this node. It's not public since eventhandlers take `self` as
     /// an argument
     handlers: Rc<RefCell<EventHandlers>>,
-    workers: Workers,
+    pub(crate) workers: Workers,
 
     // pub focus_within: bool,
     // pub hover_within: bool,
