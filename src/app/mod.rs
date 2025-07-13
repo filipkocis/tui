@@ -239,6 +239,7 @@ impl App {
 
         // Init the worker channel
         let receiver = workers::init_channel();
+        self.execute_queued_workers();
 
         loop {
             // Poll for events without blocking, using dynamic timeout
@@ -461,6 +462,19 @@ impl App {
                 return;
             }
         }
+    }
+
+    /// Traverses the root and executes all queued workers, this must be run after worker channel
+    /// initialization by calling [workers::init_channel]
+    fn execute_queued_workers(&mut self) {
+        fn traverse(node: &mut Node) {
+            node.workers.execute_queue();
+
+            for child in &node.children {
+                traverse(&mut child.borrow_mut())
+            }
+        }
+        traverse(&mut self.root.borrow_mut());
     }
 }
 
