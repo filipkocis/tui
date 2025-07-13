@@ -11,8 +11,7 @@ use std::{
 
 use crate::{
     Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
-    text::Text,
-    workers::Workers
+    text::Text, workers::Workers,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -53,7 +52,7 @@ impl Default for NodeId {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Node {
     id: NodeId,
     pub name: String,
@@ -71,6 +70,7 @@ pub struct Node {
     /// Event handlers registered on this node. It's not public since eventhandlers take `self` as
     /// an argument
     handlers: Rc<RefCell<EventHandlers>>,
+    workers: Workers,
 
     // pub focus_within: bool,
     // pub hover_within: bool,
@@ -80,6 +80,12 @@ pub struct Node {
     /// Cached data for the node, used for optimizations. Do **NOT** mutate this directly.
     /// To get a reference use [`Node::cache`].
     cache: RefCell<NodeCache>,
+}
+
+impl Default for Node {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -98,6 +104,25 @@ pub struct NodeCache {
 }
 
 impl Node {
+    /// Returns a default Node
+    pub fn new() -> Self {
+        let id = NodeId::default();
+
+        Self {
+            id,
+            name: String::default(),
+            class: String::default(),
+            style: Style::default(),
+            text: Text::default(),
+            parent: Option::default(),
+            children: Vec::default(),
+            handlers: Rc::default(),
+            workers: Workers::new(id),
+            canvas: Canvas::default(),
+            cache: RefCell::default(),
+        }
+    }
+
     /// Wraps the node in a [`NodeHandle`]
     pub fn into_handle(self) -> NodeHandle {
         NodeHandle::new(self)
