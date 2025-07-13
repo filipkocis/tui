@@ -107,12 +107,17 @@ impl Workers {
             node_id,
         };
 
-        let handle = thread::spawn(move || {
-            f(context);
+        let builder =
+            thread::Builder::new().name(format!("No.{} for {:?}", self.count, self.node_id));
 
-            // let str = format!("Worker thread for node {node_id:?} shutting down");
-            // crate::Console::print(str);
-        });
+        let handle = builder
+            .spawn(move || {
+                f(context);
+
+                // let str = format!("Worker thread for node {node_id:?} shutting down");
+                // crate::Console::print(str);
+            })
+            .expect("Could not create worker thread");
 
         self.handles.push(handle);
         self.cleanup();
