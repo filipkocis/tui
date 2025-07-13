@@ -246,7 +246,7 @@ impl Canvas {
         child: &Canvas,
         style: &Style,
         include_gap: bool,
-        is_first_and_row: bool,
+        is_first_extend: bool,
     ) {
         let child_width = child.width().min(style.size.width.computed_size() as usize);
         let max_height = style.size.height.computed_size() as usize;
@@ -259,23 +259,21 @@ impl Canvas {
             let gap_count = if include_gap { style.gap.0 as usize } else { 0 };
             let line_width = child_width + gap_count;
 
+            // Setup the height of self so children can extend horizontally
+            if is_first_extend {
+                let blank_lines = (0..max_height).map(|_| Line::new(0));
+                self.buffer.extend(blank_lines)
+            }
+
             for i in 0..child.buffer.len() {
                 let blank_line = Line::new(line_width);
 
-                if is_first_and_row {
-                    if self.height() >= max_height {
-                        break;
-                    }
-
-                    self.buffer.push(blank_line);
-                } else {
-                    if i >= max_height {
-                        break;
-                    }
-
-                    let line = &mut self.buffer[i];
-                    line.content.extend(blank_line.content);
+                if i >= max_height {
+                    break;
                 }
+
+                let line = &mut self.buffer[i];
+                line.content.extend(blank_line.content);
             }
         } else {
             let gap_count = if include_gap { style.gap.1 as usize } else { 0 };

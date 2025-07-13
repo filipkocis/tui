@@ -460,7 +460,7 @@ impl Node {
                 &child.canvas,
                 &self.style,
                 include_gap,
-                self.style.flex_row && i == 0,
+                i == 0,
             );
 
             // Include gap after first child is seen
