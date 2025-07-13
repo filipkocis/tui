@@ -19,10 +19,15 @@ use crate::{NodeId, workers::message::InternalMessage};
 pub struct Workers {
     /// NodeID of the node which owns the workers
     node_id: NodeId,
+    /// The total amount of threads started
+    count: usize,
     /// Marks a cooperative shutdown to all threads
     shutdown: Arc<AtomicBool>,
     /// Thread handles
     handles: Vec<JoinHandle<()>>,
+    /// Workers awaiting channel connection
+    queue: Vec<Box<dyn WorkerFn>>,
+}
 
 /// Worker function used in the thread execution
 pub trait WorkerFn: FnOnce(WorkerContext) + Send + 'static {}
@@ -78,8 +83,10 @@ impl Workers {
     pub fn new(id: NodeId) -> Self {
         Self {
             node_id: id,
+            count: 0,
             shutdown: Arc::default(),
             handles: Vec::default(),
+            queue: Vec::default(),
         }
     }
 
@@ -87,9 +94,15 @@ impl Workers {
     /// # Note
     /// If the channel is not yet initialized, `f` will be put into a queue
     pub fn start(&mut self, f: impl WorkerFn) {
+        let Some(sender) = WORKER_SENDER.get().cloned() else {
+            self.queue.push(Box::new(f));
+            return;
+        };
+        self.count += 1;
+
         let node_id = self.node_id;
         let context = WorkerContext {
-            sender: WORKER_SENDER.get().unwrap().clone(),
+            sender,
             shutdown: Arc::clone(&self.shutdown),
             node_id,
         };
@@ -102,6 +115,14 @@ impl Workers {
         });
 
         self.handles.push(handle);
+
+    /// Execute the queued workers, will do nothing if the channel is still not initialized
+    pub fn execute_queue(&mut self) {
+        let queue = self.queue.drain(..).collect::<Vec<_>>();
+
+        for f in queue {
+            self.start(f);
+        }
     }
 }
 
