@@ -11,8 +11,7 @@ use std::{
 
 use crate::{
     Canvas, Context, EventHandlers, HitMap, IntoEventHandler, Offset, Size, Style, Viewport,
-    text::Text,
-    workers::{WorkerFn, Workers},
+    WorkerContext, text::Text, workers::Workers,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -266,7 +265,10 @@ impl Node {
 
     /// Start a new worker thread
     #[inline]
-    pub fn start_worker(&mut self, f: impl WorkerFn) {
+    pub fn start_worker<F>(&mut self, f: F)
+    where
+        F: FnMut(WorkerContext) + Send + 'static,
+    {
         self.workers.start(Box::new(f));
     }
 

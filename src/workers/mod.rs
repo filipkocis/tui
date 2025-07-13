@@ -63,15 +63,6 @@ pub fn init_channel() -> Receiver<InternalMessage> {
     receiver
 }
 
-/// Worker funciton type used in [Workers]
-pub trait WorkerFn: FnMut(WorkerContext) -> () + Send + 'static {}
-
-impl Debug for dyn WorkerFn {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("WorkerFn").finish_non_exhaustive()
-    }
-}
-
 impl Workers {
     /// Returns new workers for `NodeId`
     pub fn new(id: NodeId) -> Self {
@@ -83,7 +74,10 @@ impl Workers {
     }
 
     /// Start a new worker thread
-    pub fn start(&mut self, mut f: Box<dyn WorkerFn>) {
+    pub fn start<F>(&mut self, mut f: F)
+    where
+        F: FnMut(WorkerContext) + Send + 'static,
+    {
         let node_id = self.node_id;
         let context = WorkerContext {
             sender: WORKER_SENDER.get().unwrap().clone(),
