@@ -23,6 +23,15 @@ pub struct Workers {
     shutdown: Arc<AtomicBool>,
     /// Thread handles
     handles: Vec<JoinHandle<()>>,
+
+/// Worker function used in the thread execution
+pub trait WorkerFn: FnOnce(WorkerContext) + Send + 'static {}
+impl<T> WorkerFn for T where T: FnOnce(WorkerContext) + Send + 'static {}
+
+impl Debug for dyn WorkerFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("WorkerFn").finish_non_exhaustive()
+    }
 }
 
 /// Context inside a [WorkerFn]
@@ -54,7 +63,8 @@ impl WorkerContext {
 /// of their owning node
 pub static WORKER_SENDER: OnceLock<Sender<InternalMessage>> = OnceLock::new();
 
-/// Initialize the [`channel`](mpsc) for threads, done automatically in [app](crate::App)
+/// Initialize the [`channel`](mpsc) for threads, done automatically in
+/// [`app.run()`](crate::App::run)
 /// # Panics
 /// Panics if called again
 pub fn init_channel() -> Receiver<InternalMessage> {
@@ -74,10 +84,9 @@ impl Workers {
     }
 
     /// Start a new worker thread
-    pub fn start<F>(&mut self, mut f: F)
-    where
-        F: FnMut(WorkerContext) + Send + 'static,
-    {
+    /// # Note
+    /// If the channel is not yet initialized, `f` will be put into a queue
+    pub fn start(&mut self, f: impl WorkerFn) {
         let node_id = self.node_id;
         let context = WorkerContext {
             sender: WORKER_SENDER.get().unwrap().clone(),

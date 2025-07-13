@@ -266,11 +266,8 @@ impl Node {
 
     /// Start a new worker thread
     #[inline]
-    pub fn start_worker<F>(&mut self, f: F)
-    where
-        F: FnMut(WorkerContext) + Send + 'static,
-    {
-        self.workers.start(Box::new(f));
+    pub fn start_worker(&mut self, f: impl WorkerFn) {
+        self.workers.start(f);
     }
 
     /// Computes the node's size and canvas. This should be called before
