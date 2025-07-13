@@ -1,4 +1,9 @@
+mod message;
+
+pub use message::Message;
+
 use std::{
+    fmt::Debug,
     sync::{
         Arc, OnceLock,
         atomic::{AtomicBool, Ordering},
@@ -7,11 +12,13 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{AppContext, Node, NodeId};
+use crate::{NodeId, workers::message::InternalMessage};
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 /// Worker threads for a node, marks them for shutdown on drop
 pub struct Workers {
+    /// NodeID of the node which owns the workers
+    node_id: NodeId,
     /// Marks a cooperative shutdown to all threads
     shutdown: Arc<AtomicBool>,
     /// Thread handles
@@ -22,7 +29,7 @@ pub struct Workers {
 /// Should be used to check for an early exit via [WorkerContext::is_shutdown]
 pub struct WorkerContext {
     /// Channel sender for this worker context
-    sender: Sender<Message>,
+    sender: Sender<InternalMessage>,
     /// Shutdown flag from [Workers]
     shutdown: Arc<AtomicBool>,
     /// The NodeId to which this worker is attatched
@@ -38,24 +45,19 @@ impl WorkerContext {
 
     /// Send a message to the main [`app`](crate::App) loop
     #[inline]
-    pub fn send(&self, message: Message) -> Result<(), SendError<Message>> {
-        self.sender.send(message)
+    pub fn send(&self, message: Message) -> Result<(), Message> {
+        self.sender.send((self.node_id, message)).map_err(|e| e.0.1)
     }
 }
 
-/// Message returned from a [`thread worker`](Workers)
-pub enum Message {
-    // Action(Action),
-    Exec(Box<dyn FnOnce(&mut AppContext, &mut Node) -> () + Send + 'static>),
-}
-
-// static COM: (Sender<usize>, Receiver<usize>) = mpsc::channel();
-pub static WORKER_SENDER: OnceLock<Sender<Message>> = OnceLock::new();
+/// Global sender used for worker channel communication via [`messages`](Message) with the [NodeId]
+/// of their owning node
+pub static WORKER_SENDER: OnceLock<Sender<InternalMessage>> = OnceLock::new();
 
 /// Initialize the [`channel`](mpsc) for threads, done automatically in [app](crate::App)
 /// # Panics
 /// Panics if called again
-pub fn init_channel() -> Receiver<Message> {
+pub fn init_channel() -> Receiver<InternalMessage> {
     let (sender, receiver) = mpsc::channel();
     WORKER_SENDER.set(sender).unwrap();
     receiver
@@ -64,9 +66,25 @@ pub fn init_channel() -> Receiver<Message> {
 /// Worker funciton type used in [Workers]
 pub trait WorkerFn: FnMut(WorkerContext) -> () + Send + 'static {}
 
+impl Debug for dyn WorkerFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("WorkerFn").finish_non_exhaustive()
+    }
+}
+
 impl Workers {
+    /// Returns new workers for `NodeId`
+    pub fn new(id: NodeId) -> Self {
+        Self {
+            node_id: id,
+            shutdown: Arc::default(),
+            handles: Vec::default(),
+        }
+    }
+
     // Start a new worker thread
-    pub fn start(&mut self, mut f: impl WorkerFn, node_id: NodeId) {
+    pub fn start(&mut self, mut f: Box<dyn WorkerFn>) {
+        let node_id = self.node_id;
         let context = WorkerContext {
             sender: WORKER_SENDER.get().unwrap().clone(),
             shutdown: Arc::clone(&self.shutdown),
@@ -76,7 +94,8 @@ impl Workers {
         let handle = thread::spawn(move || {
             f(context);
 
-            println!("Worker thread for node {:?} shutting down", node_id);
+            // let str = format!("Worker thread for node {node_id:?} shutting down");
+            // crate::Console::print(str);
         });
 
         self.handles.push(handle);
