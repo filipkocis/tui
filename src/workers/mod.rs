@@ -115,6 +115,8 @@ impl Workers {
         });
 
         self.handles.push(handle);
+        self.cleanup();
+    }
 
     /// Execute the queued workers, will do nothing if the channel is still not initialized
     pub fn execute_queue(&mut self) {
@@ -122,6 +124,23 @@ impl Workers {
 
         for f in queue {
             self.start(f);
+        }
+    }
+
+    /// Removes finished threads from handles vec
+    pub fn cleanup(&mut self) {
+        let mut removed = Vec::new();
+        for i in (0..self.handles.len()).rev() {
+            if self.handles[i].is_finished() {
+                removed.push(self.handles.swap_remove(i))
+            }
+        }
+
+        for t in removed {
+            let tid = t.thread().id();
+            if t.join().is_err() {
+                panic!("worker thread ({tid:?}) panicked at join");
+            }
         }
     }
 }
