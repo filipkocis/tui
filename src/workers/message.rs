@@ -2,9 +2,17 @@ use std::sync::mpsc::Receiver;
 
 use crate::{App, AppContext, Node, NodeId};
 
-/// Message returned from a [`thread worker`](Workers)
+/// Message returned from a [`thread worker`](Workers) back to the main loop via a channel
 pub enum Message {
     Exec(Box<dyn FnOnce(&mut AppContext, &mut Node) -> () + Send + 'static>),
+}
+
+impl Message {
+    /// Creates a [Message::Exec] but without the need to wrap it with `box`
+    #[inline]
+    pub fn exec(f: impl FnOnce(&mut AppContext, &mut Node) -> () + Send + 'static) -> Self {
+        Self::Exec(Box::new(f))
+    }
 }
 
 /// Message returned from a [`thread worker`](Workers) wrapped with its `NodeId`. Used internally,
