@@ -1,9 +1,7 @@
 use std::{
     collections::VecDeque,
-    sync::{
-        atomic::{AtomicU16, Ordering}, RwLock
-    },
-    time::{Duration, Instant},
+    sync::{LazyLock, RwLock},
+    time::Duration,
 };
 
 use crossterm::event::{KeyCode, KeyModifiers};
@@ -30,21 +28,44 @@ impl Entry {
     }
 }
 
-// TODO: add some history version for optimized worker thread ?
-static HISTORY: RwLock<VecDeque<Entry>> = RwLock::new(VecDeque::new());
-// static HISTORY_SIZE: AtomicU16 = AtomicU16::new(1_000);
-// TODO: scrolling
-static HISTORY_SIZE: AtomicU16 = AtomicU16::new(38);
+/// History for [Console]
+struct History {
+    store: VecDeque<Entry>,
+    version: usize,
+    size: u16,
+}
 
+impl History {
+    /// New Console history
+    fn new() -> Self {
+        Self {
+            store: VecDeque::default(),
+            version: 0,
+            // TODO: scrolling
+            // size: 1_000,
+            size: 38,
+        }
+    }
+
+    /// Ticks the version
+    fn tick(&mut self) {
+        self.version = self.version.wrapping_add(1);
+    }
+}
+
+/// Global Console History
+static HISTORY: LazyLock<RwLock<History>> = LazyLock::new(|| RwLock::new(History::new()));
+
+/// Push a new `entry` to Console [HISTORY]
 fn push_history(entry: Entry) {
-    if let Ok(mut lock) = HISTORY.write() {
-        lock.push_back(entry);
+    if let Ok(mut history) = HISTORY.write() {
+        history.store.push_back(entry);
+        history.tick();
 
-        let history_size = HISTORY_SIZE.load(Ordering::Relaxed);
-        let new_start = lock.len().saturating_sub(history_size as usize);
+        let new_start = history.store.len().saturating_sub(history.size as usize);
 
         if new_start > 0 {
-            lock.drain(0..new_start);
+            history.store.drain(0..new_start);
         }
     }
 }
@@ -98,10 +119,9 @@ impl Console {
     }
 
     /// Creates a new console, combine with [Console::register_toggle] to get better interactivity.
-    /// Each console instance will have the same output
-    /// # Note
-    /// `refresh_rate` is the rate in milliseconds for the console output to refresh
-    pub fn new(refresh_rate: u64) -> NodeHandle {
+    /// Each console instance will have the same output.
+    /// `refresh_rate_hz` specifies the refresh rate of the Console output per second
+    pub fn new(refresh_rate_hz: f32) -> NodeHandle {
         const WIDTH: u16 = 60;
         const HEIGHT: u16 = 40;
 
@@ -134,30 +154,38 @@ impl Console {
         let mut history = Node::default();
         history.style.size = Size::new(SizeValue::percent(100), SizeValue::cells(HEIGHT - 2));
         history.start_worker(move |c| {
+            let mut last_seen_version = 0;
+
             while !c.is_shutdown() {
+                let version = HISTORY.read().unwrap().version;
+                if version <= last_seen_version {
+                    continue;
+                }
+                last_seen_version = version;
+
                 c.send(Message::exec(|mut c| {
                     let self_weak = c.self_weak.clone();
-                    let mut history = c.node_mut();
-                    history.children.clear();
 
-                    if let Ok(lock) = HISTORY.read() {
-                        for entry in lock.iter() {
+                    if let Ok(history) = HISTORY.read() {
+                        let mut node = c.node_mut();
+                        node.children.clear();
+
+                        for entry in history.store.iter() {
                             let mut entry_node = Node::default();
                             entry_node.style.max_size = Size::parse("100%", "auto").unwrap();
                             entry_node.text = entry.as_text();
                             // TODO: FIX: if color is None make it inherit parent
                             entry_node.style.bg = Some(Hsl::new(0.0, 0.0, 0.2).into());
-                            history.add_child(entry_node.into_handle(), self_weak.clone())
+                            node.add_child(entry_node.into_handle(), self_weak.clone())
                         }
                     }
 
-                    drop(history);
                     c.app().emmit(Action::RecomputeNode(self_weak));
                 }))
                 .ok()
                 .unwrap();
 
-                std::thread::sleep(Duration::from_millis(refresh_rate));
+                std::thread::sleep(Duration::from_secs_f32(1.0 / refresh_rate_hz));
             }
         });
 
@@ -175,21 +203,28 @@ impl Console {
     }
 
     /// Sets the max console history size
+    #[inline]
     pub fn set_history_size(size: u16) {
-        HISTORY_SIZE.store(size, Ordering::Relaxed)
+        if let Ok(mut history) = HISTORY.write() {
+            history.size = size;
+            history.tick();
+        }
     }
 
     /// Prints a message to console
+    #[inline]
     pub fn print(text: String) {
         push_history(Entry::Info(text))
     }
 
     /// Prints a warning message to console
+    #[inline]
     pub fn warn(text: String) {
         push_history(Entry::Warn(text))
     }
 
     /// Prints an error message to console
+    #[inline]
     pub fn error(text: String) {
         push_history(Entry::Error(text))
     }
