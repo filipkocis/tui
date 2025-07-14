@@ -1,4 +1,5 @@
 mod button;
+mod console;
 mod dialog;
 mod drag;
 mod input;
@@ -6,6 +7,7 @@ mod resizable;
 mod tabs;
 
 pub use button::{Button, MouseClickEvent, on_click_handler};
+pub use console::Console;
 pub use dialog::Dialog;
 pub use drag::{Draggable, MouseDragEvent, OnDragResult, on_drag_handler};
 pub use input::Input;
