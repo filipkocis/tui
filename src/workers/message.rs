@@ -60,7 +60,7 @@ impl<'a> ExecContext<'a> {
 
     /// Mutably borrows `self.node`, ergonomic `self_weak` borrow
     #[inline]
-    pub fn node_mut(&self) -> RefMut<Node> {
+    pub fn node_mut(&mut self) -> RefMut<Node> {
         self.node.borrow_mut()
     }
 
