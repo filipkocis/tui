@@ -40,7 +40,8 @@ impl Debug for dyn WorkerFn {
 }
 
 /// Context inside a [WorkerFn]
-/// Should be used to check for an early exit via [WorkerContext::is_shutdown]
+/// Should be used to check for an early exit via [WorkerContext::is_shutdown].
+/// To send a message back to the main loop/thread use [`self.send(message)`][WorkerContext::send]
 pub struct WorkerContext {
     /// Channel sender for this worker context
     sender: Sender<InternalMessage>,

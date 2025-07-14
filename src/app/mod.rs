@@ -36,7 +36,7 @@ pub struct App {
     canvas: Canvas,
     viewport: Viewport,
 
-    pub(crate) context: AppContext,
+    pub context: AppContext,
     should_resize: Option<(u16, u16)>,
     should_compute: bool,
     should_render: bool,

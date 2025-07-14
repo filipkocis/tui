@@ -1,16 +1,17 @@
 use std::sync::mpsc::Receiver;
 
-use crate::{App, AppContext, Node, NodeId};
+use crate::{App, Node, NodeId};
 
-/// Message returned from a [`thread worker`](Workers) back to the main loop via a channel
+/// Message sent from a [`thread worker`](Workers) back to the main thread loop via a channel
 pub enum Message {
-    Exec(Box<dyn FnOnce(&mut AppContext, &mut Node) -> () + Send + 'static>),
+    /// Function which gets executed on the main thread after receiving the message
+    Exec(Box<dyn FnOnce(&mut App, &mut Node) -> () + Send + 'static>),
 }
 
 impl Message {
     /// Creates a [Message::Exec] but without the need to wrap it with `box`
     #[inline]
-    pub fn exec(f: impl FnOnce(&mut AppContext, &mut Node) -> () + Send + 'static) -> Self {
+    pub fn exec(f: impl FnOnce(&mut App, &mut Node) -> () + Send + 'static) -> Self {
         Self::Exec(Box::new(f))
     }
 }
@@ -50,7 +51,7 @@ impl MessageHandling for App {
             Message::Exec(f) => {
                 if let Some(node) = self.get_weak_by_id(id).and_then(|w| w.upgrade()) {
                     let mut node = node.borrow_mut();
-                    f(&mut self.context, &mut node);
+                    f(self, &mut node);
                 }
             }
         };
