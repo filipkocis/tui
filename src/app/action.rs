@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{cell::RefCell, collections::VecDeque};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
@@ -43,7 +43,7 @@ impl Action {
                 .map(|n| n.try_borrow().map(|b| format!("{:?}", b.id())).ok())
                 .flatten()
                 .unwrap_or("NodeId(invalid)".into())
-        };
+        }
 
         fn map_inputs(inputs: &[(KeyCode, KeyModifiers)]) -> Vec<String> {
             inputs
@@ -69,21 +69,33 @@ impl Action {
 /// Used inside the [app context](crate::AppContext).
 pub struct Actions {
     /// Internal actions queue
-    pub(crate) queue: VecDeque<Action>,
+    queue: RefCell<VecDeque<Action>>,
 }
 
 impl Actions {
     /// Create a new empty actions queue.
     pub fn new() -> Self {
         Self {
-            queue: VecDeque::new(),
+            queue: RefCell::default(),
         }
     }
 
     /// Adds an action to the queue.
     #[inline]
-    pub fn emmit(&mut self, action: Action) {
-        self.queue.push_back(action);
+    pub fn emmit(&self, action: Action) {
+        self.queue.borrow_mut().push_back(action);
+    }
+
+    /// Drain the internal queue
+    #[inline]
+    fn drain(&self) -> Vec<Action> {
+        self.queue.borrow_mut().drain(..).collect()
+    }
+
+    /// `true` if there are no actions in the internal queue
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.queue.borrow().is_empty()
     }
 }
 
@@ -98,7 +110,7 @@ impl App {
     pub fn handle_actions(&mut self) -> std::io::Result<()> {
         let mut recomputed = Vec::<WeakNodeHandle>::new();
 
-        for action in self.context.actions.queue.drain(..).collect::<Vec<_>>() {
+        for action in self.context.actions.drain() {
             match &action {
                 Action::RecomputeNode(weak) => {
                     if recomputed.iter().any(|r| r.is_equal(weak)) {

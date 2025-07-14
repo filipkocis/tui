@@ -36,7 +36,7 @@ pub struct App {
     canvas: Canvas,
     viewport: Viewport,
 
-    pub context: AppContext,
+    pub(crate) context: AppContext,
     should_resize: Option<(u16, u16)>,
     should_compute: bool,
     should_render: bool,
@@ -256,7 +256,7 @@ impl App {
             }
 
             // Drain the actions queue
-            if !self.context.actions.queue.is_empty() {
+            if !self.context.actions.is_empty() {
                 self.handle_actions()?;
                 dynamic_timeout.update();
             }

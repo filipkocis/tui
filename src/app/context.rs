@@ -36,7 +36,7 @@ impl AppContext {
 
     /// Emmit an action
     #[inline]
-    pub fn emmit(&mut self, action: Action) {
+    pub fn emmit(&self, action: Action) {
         self.actions.emmit(action);
     }
 
