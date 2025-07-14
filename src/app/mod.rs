@@ -236,6 +236,7 @@ impl App {
         self.prepare_screen()?;
         self.should_resize = Some(self.viewport.screen);
 
+        let mut cleanup_time = Instant::now();
         let mut dynamic_timeout = DynamicTimeout::new(0.1, 1.0);
 
         // Init the worker channel
@@ -243,6 +244,9 @@ impl App {
         self.execute_queued_workers();
 
         loop {
+            // Cleanup workers every 10 seconds
+            self.periodic_workers_cleanup(&mut cleanup_time, 10);
+
             // Poll for events without blocking, using dynamic timeout
             while crossterm::event::poll(dynamic_timeout.get())? {
                 let event = crossterm::event::read()?;
@@ -470,6 +474,23 @@ impl App {
     fn execute_queued_workers(&mut self) {
         fn traverse(node: &mut Node) {
             node.workers.execute_queue();
+
+            for child in &node.children {
+                traverse(&mut child.borrow_mut())
+            }
+        }
+        traverse(&mut self.root.borrow_mut());
+    }
+
+    /// Periodically cleanup workers
+    fn periodic_workers_cleanup(&mut self, time: &mut Instant, secs: u64) {
+        if time.elapsed() < Duration::from_secs(secs) {
+            return;
+        }
+        *time = Instant::now();
+
+        fn traverse(node: &mut Node) {
+            node.workers.cleanup();
 
             for child in &node.children {
                 traverse(&mut child.borrow_mut())
