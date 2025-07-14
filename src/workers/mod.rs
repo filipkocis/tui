@@ -100,8 +100,6 @@ impl Workers {
             return;
         };
         self.count += 1;
-        let thread_no = self.count;
-
         let node_id = self.node_id;
         let context = WorkerContext {
             sender,
@@ -109,15 +107,20 @@ impl Workers {
             node_id,
         };
 
-        let builder = thread::Builder::new().name(format!("No.{thread_no} for {:?}", self.node_id));
+        let thread_no = self.count;
+        let thread_name = format!("No.{thread_no} for {:?}", self.node_id);
+        let builder = thread::Builder::new().name(thread_name.clone());
 
         let handle = builder
             .spawn(move || {
-                f(context);
+                // Catch the panic so it doesn't panic on join in main thread
+                let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    // Run worker fn
+                    f(context);
 
-                crate::Console::print(format!(
-                    "Worker thread No.{thread_no} for node {node_id:?} shutting down"
-                ));
+                    // Log end of thread
+                    crate::Console::print(format!("Worker thread {thread_name} shutting down"));
+                }));
             })
             .expect("Could not create worker thread");
 
@@ -145,8 +148,10 @@ impl Workers {
 
         for t in removed {
             let tid = t.thread().id();
+            let tname = t.thread().name().unwrap_or_default().to_string();
             if t.join().is_err() {
-                panic!("worker thread ({tid:?}) panicked at join");
+                // Workers are wrapped with catch_unwind so this should almost never happen
+                panic!("uncaught worker thread ({tid:?}) {tname:?} panicked at join");
             }
         }
     }
