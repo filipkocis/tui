@@ -213,19 +213,19 @@ impl Console {
 
     /// Prints a message to console
     #[inline]
-    pub fn print(text: String) {
-        push_history(Entry::Info(text))
+    pub fn print(text: impl Into<String>) {
+        push_history(Entry::Info(text.into()))
     }
 
     /// Prints a warning message to console
     #[inline]
-    pub fn warn(text: String) {
-        push_history(Entry::Warn(text))
+    pub fn warn(text: impl Into<String>) {
+        push_history(Entry::Warn(text.into()))
     }
 
     /// Prints an error message to console
     #[inline]
-    pub fn error(text: String) {
-        push_history(Entry::Error(text))
+    pub fn error(text: impl Into<String>) {
+        push_history(Entry::Error(text.into()))
     }
 }
