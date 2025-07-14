@@ -10,6 +10,12 @@ use super::Node;
 pub struct WeakNodeHandle(Weak<RefCell<Node>>);
 
 impl WeakNodeHandle {
+    /// Creates a new weak handle from the inner type
+    #[inline(always)]
+    pub(crate) fn new(inner: Weak<RefCell<Node>>) -> Self {
+        Self(inner)
+    }
+
     /// Get the inner `Weak<RefCell<Node>>`, use with cauton.
     #[inline(always)]
     fn inner(&self) -> &Weak<RefCell<Node>> {
