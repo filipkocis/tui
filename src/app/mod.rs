@@ -50,15 +50,27 @@ impl App {
     ///
     /// Without calling this, you will not see any panic messages while in an `AlternateScreen`
     pub fn register_panic_hook() {
+        use std::sync::OnceLock;
+        use std::thread::{self, ThreadId};
+
+        static MAIN_THREAD_ID: OnceLock<ThreadId> = OnceLock::new();
+        let _ = MAIN_THREAD_ID.set(thread::current().id());
+
         let hook = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |panic_info| {
-            while crossterm::event::poll(Duration::from_millis(0)).unwrap_or_default() {
-                let _ = crossterm::event::read();
-            }
+            let current_thread = thread::current();
+            let current_id = current_thread.id();
 
-            // Cleanup terminal state
-            let _ = execute!(io::stdout(), LeaveAlternateScreen);
-            let _ = disable_raw_mode();
+            if Some(&current_id) == MAIN_THREAD_ID.get() {
+                // Consume all events
+                while crossterm::event::poll(Duration::from_millis(0)).unwrap_or_default() {
+                    let _ = crossterm::event::read();
+                }
+
+                // Cleanup terminal state
+                let _ = execute!(io::stdout(), LeaveAlternateScreen);
+                let _ = disable_raw_mode();
+            }
 
             // Call the original panic hook
             hook(panic_info);
