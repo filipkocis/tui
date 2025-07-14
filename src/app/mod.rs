@@ -70,10 +70,18 @@ impl App {
                 // Cleanup terminal state
                 let _ = execute!(io::stdout(), LeaveAlternateScreen);
                 let _ = disable_raw_mode();
-            }
 
-            // Call the original panic hook
-            hook(panic_info);
+                // Call the original panic hook
+                hook(panic_info);
+            } else {
+                // Log the panic
+                // ThreadId(n) "thread name" panicked at path/to/file:\n payload
+                crate::Console::error(format!(
+                    "{current_id:?} {:?} {}",
+                    current_thread.name().unwrap_or("unknown"),
+                    panic_info.to_string(),
+                ));
+            }
         }));
     }
 
