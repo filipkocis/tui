@@ -33,6 +33,9 @@ pub enum Action {
     /// Recomputing starts with the first node (parent) that is not auto-sized, and does not have
     /// changed fields which might affect the layout (e.g. size, offset).
     RecomputeNode(WeakNodeHandle),
+
+    /// Remove a Node from the root tree
+    RemoveNode(NodeId),
 }
 
 impl Action {
@@ -60,6 +63,7 @@ impl Action {
             Self::FocusPrevious => "FocusPrevious".into(),
             Self::FocusNode(n) => format!("FocusNode({})", node_id(n)),
             Self::RecomputeNode(n) => format!("RecomputeNode({})", node_id(n)),
+            Self::RemoveNode(id) => format!("RemoveNode({:?})", id),
         }
     }
 }
@@ -259,6 +263,11 @@ impl ActionHandling for App {
                     .borrow()
                     .render_to(cached_viewport, &mut self.canvas, &mut self.hitmap);
                 self.should_draw = true;
+            }
+            Action::RemoveNode(id) => {
+                if let Some(parent) = self.remove_node(id).map(|(parent, _)| parent) {
+                    todo!("recompute parent")
+                }
             }
         }
 

@@ -489,6 +489,35 @@ impl App {
         }
     }
 
+    /// Removes a node from the tree by its `id`, returning the removed node's handle, and its old
+    /// parent's weak handle.
+    /// # Note
+    /// Will **not** remove the root node.
+    pub fn remove_node(&self, id: NodeId) -> Option<(WeakNodeHandle, NodeHandle)> {
+        fn traverse(node: &mut Node, id: NodeId) -> Option<(WeakNodeHandle, NodeHandle)> {
+            let mut remove = None;
+
+            for i in 0..node.children.len() {
+                let child = &node.children[i];
+                let child = &mut child.borrow_mut();
+
+                if child.id() == id {
+                    let parent = child.parent.take().expect("corrupt parent field");
+                    remove = Some((parent, i));
+                    break;
+                }
+
+                if let Some(removed) = traverse(child, id) {
+                    return Some(removed);
+                }
+            }
+
+            remove.map(|(parent, index)| (parent, node.children.swap_remove(index)))
+        }
+
+        traverse(&mut self.root.borrow_mut(), id)
+    }
+
     /// Traverses the root and executes the function `f` on each node, allowing read-only access to
     /// the nodes.
     /// # Panics
