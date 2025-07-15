@@ -109,29 +109,6 @@ pub trait ActionHandling {
     fn handle_action(&mut self, action: Action) -> std::io::Result<()>;
 }
 
-impl App {
-    /// Handles all actions in the queue.
-    pub fn handle_actions(&mut self) -> std::io::Result<()> {
-        let mut recomputed = Vec::<WeakNodeHandle>::new();
-
-        for action in self.context.actions.drain() {
-            match &action {
-                Action::RecomputeNode(weak) => {
-                    if recomputed.iter().any(|r| r.is_equal(weak)) {
-                        continue; // Already recomputed this node
-                    }
-                    recomputed.push(weak.clone());
-                }
-                _ => {}
-            }
-
-            self.handle_action(action)?
-        }
-
-        Ok(())
-    }
-}
-
 impl ActionHandling for App {
     fn handle_action(&mut self, action: Action) -> std::io::Result<()> {
         match action {
@@ -180,97 +157,122 @@ impl ActionHandling for App {
                 let node_id = node.borrow().id();
                 self.dispatch_node_focus_event(node_id, node_weak);
             }
-            Action::RecomputeNode(node_weak) => {
-                // True if the node is auto-sized, has changed size, or changed offset type.
-                // Always false if the node is and was absolute, since that does not affect the
-                // parent.
-                let get_parent_predicate = |node: &Node| {
-                    let auto_sized =
-                        node.style.size.width.is_auto() || node.style.size.height.is_auto();
-                    let changed_size = node.cache().style.size != node.style.size;
-                    let changed_offset_type = !node.cache().style.offset.type_eq(node.style.offset);
-
-                    let was_absolute = node.cache().style.offset.is_absolute();
-                    let is_absolute = node.style.offset.is_absolute();
-
-                    if was_absolute && is_absolute {
-                        // If the node was and is absolute, don't get the parent
-                        return false;
-                    }
-
-                    // If the node is auto-sized, has changed size, or changed offset type
-                    auto_sized || changed_size || changed_offset_type
-                };
-
-                let Some((_, node)) = get_parent_while(&node_weak, get_parent_predicate) else {
-                    return Ok(());
-                };
-
-                let mut node = node.borrow_mut();
-                let cached_parent_position = node.cache().parent_position;
-                let cached_parent_available_size = node.cache().parent_available_size;
-                let cached_position = node.cache().canvas_position;
-                let cached_size = node.cache().style.total_size();
-                let mut cached_viewport = node.cache().viewport;
-
-                // Compute the tree starting from `node`
-                node.compute(cached_parent_position, cached_parent_available_size);
-
-                // If the node is absolute, we need to adjust the viewport in case it has moved
-                // If it's relative, we cap the new viewport to the parent's content size.
-                {
-                    let (x, y) = node.absolute_position();
-                    let (cache_x, cache_y) = cached_position;
-                    let (screen_x, screen_y) = self.context.screen_size;
-
-                    // Grab the smallest `min` position for the viewport
-                    cached_viewport.min.0 = (x.min(cache_x).max(0) as u16).min(screen_x);
-                    cached_viewport.min.1 = (y.min(cache_y).max(0) as u16).min(screen_y);
-
-                    // Compute new and old max positions (pos + size)
-                    let size = node.style.total_size();
-                    let new_max = (
-                        (x + size.0 as i16).max(0) as u16,
-                        (y + size.1 as i16).max(0) as u16,
-                    );
-                    let old_max = (
-                        (cache_x + cached_size.0 as i16).max(0) as u16,
-                        (cache_y + cached_size.1 as i16).max(0) as u16,
-                    );
-
-                    // Grab the largest `max` span for the viewport
-                    cached_viewport.max.0 = new_max.0.max(old_max.0).min(screen_x);
-                    cached_viewport.max.1 = new_max.1.max(old_max.1).min(screen_y);
-
-                    // Cap the viewport to the parent's available content size
-                    if node.style.offset.is_translate() {
-                        let min = cached_parent_position.tuple();
-                        let max = (
-                            min.0 + cached_parent_available_size.tuple().0 as i16,
-                            min.1 + cached_parent_available_size.tuple().1 as i16,
-                        );
-                        cached_viewport.min.0 = cached_viewport.min.0.max(min.0.max(0) as u16);
-                        cached_viewport.min.1 = cached_viewport.min.1.max(min.1.max(0) as u16);
-                        cached_viewport.max.0 = cached_viewport.max.0.min(max.0.max(0) as u16);
-                        cached_viewport.max.1 = cached_viewport.max.1.min(max.1.max(0) as u16);
-                    }
-                }
-
-                // Render the tree using the minimal viewport or the cached viewport which is the
-                // parent's content size.
-                drop(node);
-                self.root
-                    .borrow()
-                    .render_to(cached_viewport, &mut self.canvas, &mut self.hitmap);
-                self.should_draw = true;
-            }
+            Action::RecomputeNode(node_weak) => self.handle_recompute_node_action(node_weak),
             Action::RemoveNode(id) => {
                 if let Some(parent) = self.remove_node(id).map(|(parent, _)| parent) {
-                    todo!("recompute parent")
+                    self.handle_recompute_node_action(parent);
                 }
             }
         }
 
         Ok(())
+    }
+}
+
+impl App {
+    /// Handles all actions in the queue.
+    pub fn handle_actions(&mut self) -> std::io::Result<()> {
+        let mut recomputed = Vec::<WeakNodeHandle>::new();
+
+        for action in self.context.actions.drain() {
+            match &action {
+                Action::RecomputeNode(weak) => {
+                    if recomputed.iter().any(|r| r.is_equal(weak)) {
+                        continue; // Already recomputed this node
+                    }
+                    recomputed.push(weak.clone());
+                }
+                _ => {}
+            }
+
+            self.handle_action(action)?
+        }
+
+        Ok(())
+    }
+
+    /// Handle [Action::RecomputeNode]
+    fn handle_recompute_node_action(&mut self, node_weak: WeakNodeHandle) {
+        // True if the node is auto-sized, has changed size, or changed offset type.
+        // Always false if the node is and was absolute, since that does not affect the
+        // parent.
+        let get_parent_predicate = |node: &Node| {
+            let auto_sized = node.style.size.width.is_auto() || node.style.size.height.is_auto();
+            let changed_size = node.cache().style.size != node.style.size;
+            let changed_offset_type = !node.cache().style.offset.type_eq(node.style.offset);
+
+            let was_absolute = node.cache().style.offset.is_absolute();
+            let is_absolute = node.style.offset.is_absolute();
+
+            if was_absolute && is_absolute {
+                // If the node was and is absolute, don't get the parent
+                return false;
+            }
+
+            // If the node is auto-sized, has changed size, or changed offset type
+            auto_sized || changed_size || changed_offset_type
+        };
+
+        let Some((_, node)) = get_parent_while(&node_weak, get_parent_predicate) else {
+            return;
+        };
+
+        let mut node = node.borrow_mut();
+        let cached_parent_position = node.cache().parent_position;
+        let cached_parent_available_size = node.cache().parent_available_size;
+        let cached_position = node.cache().canvas_position;
+        let cached_size = node.cache().style.total_size();
+        let mut cached_viewport = node.cache().viewport;
+
+        // Compute the tree starting from `node`
+        node.compute(cached_parent_position, cached_parent_available_size);
+
+        // If the node is absolute, we need to adjust the viewport in case it has moved
+        // If it's relative, we cap the new viewport to the parent's content size.
+        {
+            let (x, y) = node.absolute_position();
+            let (cache_x, cache_y) = cached_position;
+            let (screen_x, screen_y) = self.context.screen_size;
+
+            // Grab the smallest `min` position for the viewport
+            cached_viewport.min.0 = (x.min(cache_x).max(0) as u16).min(screen_x);
+            cached_viewport.min.1 = (y.min(cache_y).max(0) as u16).min(screen_y);
+
+            // Compute new and old max positions (pos + size)
+            let size = node.style.total_size();
+            let new_max = (
+                (x + size.0 as i16).max(0) as u16,
+                (y + size.1 as i16).max(0) as u16,
+            );
+            let old_max = (
+                (cache_x + cached_size.0 as i16).max(0) as u16,
+                (cache_y + cached_size.1 as i16).max(0) as u16,
+            );
+
+            // Grab the largest `max` span for the viewport
+            cached_viewport.max.0 = new_max.0.max(old_max.0).min(screen_x);
+            cached_viewport.max.1 = new_max.1.max(old_max.1).min(screen_y);
+
+            // Cap the viewport to the parent's available content size
+            if node.style.offset.is_translate() {
+                let min = cached_parent_position.tuple();
+                let max = (
+                    min.0 + cached_parent_available_size.tuple().0 as i16,
+                    min.1 + cached_parent_available_size.tuple().1 as i16,
+                );
+                cached_viewport.min.0 = cached_viewport.min.0.max(min.0.max(0) as u16);
+                cached_viewport.min.1 = cached_viewport.min.1.max(min.1.max(0) as u16);
+                cached_viewport.max.0 = cached_viewport.max.0.min(max.0.max(0) as u16);
+                cached_viewport.max.1 = cached_viewport.max.1.min(max.1.max(0) as u16);
+            }
+        }
+
+        // Render the tree using the minimal viewport or the cached viewport which is the
+        // parent's content size.
+        drop(node);
+        self.root
+            .borrow()
+            .render_to(cached_viewport, &mut self.canvas, &mut self.hitmap);
+        self.should_draw = true;
     }
 }
