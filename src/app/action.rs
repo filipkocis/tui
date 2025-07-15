@@ -34,7 +34,7 @@ pub enum Action {
     /// changed fields which might affect the layout (e.g. size, offset).
     RecomputeNode(WeakNodeHandle),
 
-    /// Remove a Node from the root tree
+    /// Remove a Node from the root tree and recompute its parent
     RemoveNode(NodeId),
 }
 

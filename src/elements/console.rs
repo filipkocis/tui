@@ -126,6 +126,7 @@ impl Console {
         const HEIGHT: u16 = 40;
 
         let mut root = Draggable::new(None, Some((0, 1)), KeyModifiers::NONE);
+        let root_id = root.id();
         root.style.border = (true, true, true, true, None);
         root.style.offset = Offset::Absolute(0, 0);
         root.style.size = Size::from_cells(WIDTH, HEIGHT);
@@ -141,7 +142,10 @@ impl Console {
         let mut label = Node::default();
         label.text = "Console".into();
 
-        let mut close_button = Button::new("x", None);
+        let mut close_button = Button::new("x", Some(Box::new(move |c, _, _| {
+            c.app.emmit(Action::RemoveNode(root_id));
+            return true;
+        })));
         close_button.style.size = Size::from_cells(1, 1);
         close_button.style.padding = (0, 1).into();
         close_button.style.bg = Some(Hsl::new(10., 1., 0.5).into());
