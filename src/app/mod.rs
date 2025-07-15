@@ -523,17 +523,17 @@ impl App {
     /// # Panics
     /// Panics if any node is borrowed mutably
     #[inline]
-    pub fn traverse_nodes<T, E>(&self, f: impl FnMut(&Node) -> Result<T, E>) -> Result<(), E> {
-        fn traverse<T, E>(node: &Node, mut f: impl FnMut(&Node) -> Result<T, E>) -> Result<(), E> {
+    pub fn traverse_nodes<T, E>(&self, mut f: impl FnMut(&Node) -> Result<T, E>) -> Result<(), E> {
+        fn traverse<T, E>(node: &Node, f: &mut dyn FnMut(&Node) -> Result<T, E>) -> Result<(), E> {
             f(node)?;
 
             for child in &node.children {
-                traverse(&child.borrow(), &mut f)?
+                traverse(&child.borrow(), f)?
             }
 
             Ok(())
         }
-        traverse(&self.root.borrow(), f)
+        traverse(&self.root.borrow(), &mut f)
     }
 
     /// Traverses the root and executes the function `f` on each node, allowing mutation of the
@@ -543,21 +543,21 @@ impl App {
     #[inline]
     pub fn traverse_nodes_mut<T, E>(
         &self,
-        f: impl FnMut(&mut Node) -> Result<T, E>,
+        mut f: impl FnMut(&mut Node) -> Result<T, E>,
     ) -> Result<(), E> {
         fn traverse<T, E>(
             node: &mut Node,
-            mut f: impl FnMut(&mut Node) -> Result<T, E>,
+            f: &mut dyn FnMut(&mut Node) -> Result<T, E>,
         ) -> Result<(), E> {
             f(node)?;
 
             for child in &node.children {
-                traverse(&mut child.borrow_mut(), &mut f)?
+                traverse(&mut child.borrow_mut(), f)?
             }
 
             Ok(())
         }
-        traverse(&mut self.root.borrow_mut(), f)
+        traverse(&mut self.root.borrow_mut(), &mut f)
     }
 
     /// Traverses the root and executes all queued workers, this must be run after worker channel
