@@ -69,13 +69,13 @@ impl Attrs {
         match attr {
             Attribute::Reset => Self::default(),
 
-            Attribute::Bold => self.set(0),
+            Attribute::Bold => self.unset(2).set(0),
             Attribute::NoBold => self.unset(0),
 
             Attribute::Italic => self.set(1),
             Attribute::NoItalic => self.unset(1),
 
-            Attribute::Dim => self.set(2),
+            Attribute::Dim => self.unset(0).set(2),
             Attribute::NormalIntensity => self.unset(0).unset(1).unset(2),
 
             Attribute::Underlined => self.unset_underline().set(3),
@@ -84,8 +84,8 @@ impl Attrs {
             Attribute::Underdotted => self.unset_underline().set(6),
             Attribute::Underdashed => self.unset_underline().set(7),
 
-            Attribute::SlowBlink => self.set(8),
-            Attribute::RapidBlink => self.set(9),
+            Attribute::SlowBlink => self.unset(9).set(8),
+            Attribute::RapidBlink => self.unset(8).set(9),
             Attribute::NoBlink => self.unset(8).unset(9),
 
             Attribute::Reverse => self.set(10),
