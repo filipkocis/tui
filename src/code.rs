@@ -118,4 +118,42 @@ impl CodeUnit {
     pub fn apply_attr(&mut self, attr: Attribute) {
         self.attrs = self.attrs.apply(attr);
     }
+
+    /// Returns the reset codes for this code unit.
+    pub fn into_reset_codes(self) -> Vec<Code> {
+        let mut codes = Vec::new();
+
+        if self.fg.is_some() {
+            codes.push(Code::Foreground(Color::Reset));
+        }
+
+        if self.bg.is_some() {
+            codes.push(Code::Background(Color::Reset));
+        }
+
+        if !self.attrs.is_empty() {
+            codes.push(Code::Attribute(Attribute::Reset));
+        }
+
+        codes
+    }
+
+    /// Converts the code unit into a vector of `Code` variants.
+    pub fn into_codes(self) -> Vec<Code> {
+        let mut codes = Vec::new();
+
+        if let Some(fg) = self.fg {
+            codes.push(Code::Foreground(fg));
+        }
+
+        if let Some(bg) = self.bg {
+            codes.push(Code::Background(bg));
+        }
+
+        for attr in self.attrs {
+            codes.push(Code::Attribute(attr));
+        }
+
+        codes
+    }
 }
