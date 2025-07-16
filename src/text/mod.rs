@@ -4,7 +4,9 @@ mod visual;
 pub use buffer_line::*;
 pub use visual::*;
 
-use std::path::Path;
+use std::{ops::Range, path::Path};
+
+use crate::Code;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 /// Text wrapping options
@@ -102,8 +104,8 @@ impl Text {
         let terminal_height = crossterm::terminal::size().map_or(height, |(_, h)| h);
         let height = height.min(terminal_height);
 
-        // Sort styles
-        self.sort_styles();
+        // Prepare styles
+        self.prepare_styles();
         let mut styles = self.styles.iter().peekable();
 
         for (line_index, line) in self
@@ -208,8 +210,102 @@ impl Text {
         }
     }
 
+    /// Flattens styles into a contiguous non-overlapping array
+    /// # Note
+    /// Must be called after sorting styles
+    fn flatten_styles(&mut self) {
+        if self.styles.is_empty() {
+            return;
+        }
+
+        use crossterm::style::Color;
+        #[derive(Default)]
+        struct CodeUnit {
+            fg: Option<Color>,
+            bg: Option<Color>,
+            // TODO: attrs
+        }
+
+        /// Set a code range
+        fn set(line: &mut Vec<CodeUnit>, code: Code, range: Range<usize>) {
+            if line.len() < range.end {
+                line.resize_with(range.end, || CodeUnit::default());
+            }
+
+            for i in range {
+                match code {
+                    Code::Attribute(_) => todo!("attrs flatten"),
+                    Code::Background(bg) => line[i].bg = Some(bg),
+                    Code::Foreground(fg) => line[i].fg = Some(fg),
+                }
+            }
+        }
+
+        /// Combine code units into style spans
+        fn combine(line: &[CodeUnit], li: usize) -> Vec<StyleSpan> {
+            let mut styles = vec![];
+
+            let mut fg = None;
+            let mut fg_i = 0;
+
+            let mut bg = None;
+            let mut bg_i = 0;
+
+            for i in 0..=line.len() {
+                let unit = line.get(i);
+
+                let unit_fg = unit.and_then(|u| u.fg);
+                let unit_bg = unit.and_then(|u| u.bg);
+
+                if unit_fg != fg {
+                    if let Some(fg) = fg {
+                        styles.push(StyleSpan::new(Code::Foreground(fg), li, fg_i, i - fg_i));
+                    }
+
+                    fg = unit_fg;
+                    fg_i = i;
+                }
+
+                if unit_bg != bg {
+                    if let Some(bg) = bg {
+                        styles.push(StyleSpan::new(Code::Background(bg), li, bg_i, i - bg_i));
+                    }
+
+                    bg = unit_bg;
+                    bg_i = i;
+                }
+            }
+
+            styles
+        }
+
+        let mut line = Vec::<CodeUnit>::new();
+        let mut styles = vec![];
+        let mut last_line = 0;
+        for style in self.styles.drain(..) {
+            if style.line < last_line {
+                panic!("unsorted styles");
+            }
+
+            if style.line > last_line {
+                styles.extend(combine(&line, last_line));
+                last_line = style.line;
+                line = Vec::new();
+            }
+
+            let range = style.character..style.end();
+            set(&mut line, style.code, range);
+        }
+
+        if !line.is_empty() {
+            styles.extend(combine(&line, last_line));
+        }
+
+        self.styles = styles;
+    }
+
     /// Sort styles by index
-    pub fn sort_styles(&mut self) {
+    fn sort_styles(&mut self) {
         self.styles.sort_by(|a, b| {
             let line_cmp = a.line.cmp(&b.line);
             if line_cmp.is_eq() {
@@ -218,6 +314,12 @@ impl Text {
                 line_cmp
             }
         });
+    }
+
+    /// Sort and flatten styles
+    pub fn prepare_styles(&mut self) {
+        self.sort_styles();
+        self.flatten_styles();
     }
 
     /// Adds new styles to the existing one, re-prepares text
