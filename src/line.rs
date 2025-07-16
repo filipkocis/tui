@@ -6,6 +6,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     Code,
+    code::CodeUnit,
     text::{Attrs, StyledUnit, VisualGrapheme},
 };
 
@@ -74,65 +75,27 @@ impl Line {
         }
     }
 
-    /// Returns all relevant codes active at `real_index`
-    pub fn active_codes_at(&self, real_index: usize) -> Vec<Code> {
-        let mut codes = Vec::new();
+    /// Returns the [CodeUnit] with all active codes at the given `real` idnex.
+    pub fn active_codes_at(&self, real_index: usize) -> CodeUnit {
+        let mut code_unit = CodeUnit::new();
 
-        let mut attrs = Attrs::default();
-        let mut bg = Color::Reset;
-        let mut fg = Color::Reset;
-
-        for unit in &self.content[..real_index] {
-            match unit {
+        for style_unit in &self.content[..real_index] {
+            match style_unit {
                 StyledUnit::Code(code) => match *code {
-                    Code::Attribute(attr) => attrs = attrs.apply(attr),
-                    Code::Background(color) => bg = color,
-                    Code::Foreground(color) => fg = color,
+                    Code::Attribute(attr) => code_unit.apply_attr(attr),
+                    Code::Background(color) => code_unit.set_bg(color),
+                    Code::Foreground(color) => code_unit.set_fg(color),
                 },
                 _ => {}
             }
         }
 
-        for attr in attrs.extract() {
-            if let Some(attr) = attr {
-                codes.push(Code::Attribute(attr));
-            }
-        }
-
-        if bg != Color::Reset {
-            codes.push(Code::Background(bg));
-        }
-
-        if fg != Color::Reset {
-            codes.push(Code::Foreground(fg));
-        }
-
-        codes
+        code_unit
     }
 
-    /// Returns all relevant reset codes to end the style at `real_index`
+    /// Returns a vector of codes that should be applied to reset the style at the `real` index.
     pub fn reset_codes_for(&self, real_index: usize) -> Vec<Code> {
-        let active_codes = self.active_codes_at(real_index);
-        let mut reset_codes = Vec::new();
-        let mut has_attr = false;
-
-        for code in active_codes {
-            if code.is_reset() {
-                continue;
-            }
-
-            if code.is_attribute() {
-                has_attr = true;
-            } else {
-                reset_codes.push(code.into_reset());
-            }
-        }
-
-        if has_attr {
-            reset_codes.push(Code::Attribute(Attribute::Reset));
-        }
-
-        reset_codes
+        self.active_codes_at(real_index).into_reset_codes()
     }
 
     /// Returns a new line with the graphemes between `(column..column + length)` column range, if
@@ -152,18 +115,14 @@ impl Line {
         let start_gap = start_width - (column - start_column);
         let end_gap = (column + length) - end_column;
 
-        let active_codes = self
-            .active_codes_at(start_index)
-            .into_iter()
-            .map(StyledUnit::Code);
-        let reset_codes = self
-            .reset_codes_for(end_index)
-            .into_iter()
-            .map(StyledUnit::Code);
-
         let mut line = Line::new(0);
 
         // Start line with active codes
+        let active_codes = self
+            .active_codes_at(start_index)
+            .into_codes()
+            .into_iter()
+            .map(StyledUnit::Code);
         line.content.extend(active_codes);
 
         // Fill with spaces, if start is inside a grapheme
@@ -197,6 +156,10 @@ impl Line {
         }
 
         // End line with reset codes
+        let reset_codes = self
+            .reset_codes_for(end_index)
+            .into_iter()
+            .map(StyledUnit::Code);
         line.content.extend(reset_codes);
         line
     }
@@ -239,10 +202,11 @@ impl Line {
             }
 
             // End with reset codes
-            let reset_codes = self.reset_codes_for(start_index);
-            new_line
-                .content
-                .extend(reset_codes.into_iter().map(StyledUnit::Code));
+            let reset_codes = self
+                .reset_codes_for(start_index)
+                .into_iter()
+                .map(StyledUnit::Code);
+            new_line.content.extend(reset_codes);
         }
 
         // Add the other line content
@@ -254,10 +218,12 @@ impl Line {
             let (end_index, end_column, end_width) = self.column_to_index(column + other_width - 1);
 
             // Add active codes for the end
-            let active_codes = self.active_codes_at(end_index);
-            new_line
-                .content
-                .extend(active_codes.into_iter().map(StyledUnit::Code));
+            let active_codes = self
+                .active_codes_at(end_index)
+                .into_codes()
+                .into_iter()
+                .map(StyledUnit::Code);
+            new_line.content.extend(active_codes);
 
             // Fill with spaces if inside a grapheme
             let end_gap = end_width - (column + other_width - end_column);
