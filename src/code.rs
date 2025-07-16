@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crossterm::style::{Attribute, Color, SetBackgroundColor, SetForegroundColor};
 
+use crate::text::Attrs;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Copy)]
 pub enum Code {
@@ -43,4 +44,11 @@ impl Display for Code {
             Code::Foreground(color) => write!(f, "{}", SetForegroundColor(*color)),
         }
     }
+}
+
+#[derive(Default)]
+pub struct CodeUnit {
+    pub fg: Option<Color>,
+    pub bg: Option<Color>,
+    pub attrs: Attrs,
 }
