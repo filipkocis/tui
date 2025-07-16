@@ -2,32 +2,6 @@ use std::fmt::Display;
 
 use crossterm::style::{Attribute, Color, SetBackgroundColor, SetForegroundColor};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Char {
-    Char(char),
-    Code(Code),
-}
-
-impl Char {
-    #[inline]
-    pub fn is_code(&self) -> bool {
-        matches!(self, Char::Code(_))
-    }
-
-    #[inline]
-    pub fn is_char(&self) -> bool {
-        matches!(self, Char::Char(_))
-    }
-
-    /// True if `self.is_code() && code.is_reset()`
-    #[inline]
-    pub fn is_reset_code(&self) -> bool {
-        match self {
-            Char::Code(code) => code.is_reset(),
-            _ => false,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Copy)]
 pub enum Code {

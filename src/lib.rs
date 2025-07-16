@@ -12,7 +12,7 @@ pub mod workers;
 
 pub use app::*;
 pub use canvas::Canvas;
-pub use char::{Char, Code};
+pub use char::Code;
 pub use color::{Hsl, Oklch};
 pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
