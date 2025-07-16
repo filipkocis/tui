@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Display};
+use std::fmt::Display;
 
 use crossterm::style::{Attribute, Color};
 use unicode_segmentation::UnicodeSegmentation;
@@ -6,7 +6,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     Code,
-    text::{StyledUnit, VisualGrapheme},
+    text::{Attrs, StyledUnit, VisualGrapheme},
 };
 
 #[derive(Debug, Default, Clone)]
