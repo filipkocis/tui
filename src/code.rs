@@ -87,7 +87,7 @@ impl CodeUnit {
         if color == Color::Reset {
             self.fg = None;
         } else {
-            self.bg = Some(color);
+            self.fg = Some(color);
         }
     }
 
