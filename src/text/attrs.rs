@@ -1,33 +1,41 @@
 use crossterm::style::Attribute;
 
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Hash, Clone, Copy, PartialEq, Eq)]
 /// A bitfield representing the [`attributes`](Attribute) of a character.
 pub struct Attrs(u16);
 
 impl Attrs {
-    pub fn extract(self) -> Vec<Option<Attribute>> {
-        let attrs = [
-            Attribute::Bold,
-            Attribute::Italic,
-            Attribute::Dim,
-            Attribute::Underlined,
-            Attribute::DoubleUnderlined,
-            Attribute::Undercurled,
-            Attribute::Underdotted,
-            Attribute::Underdashed,
-            Attribute::SlowBlink,
-            Attribute::RapidBlink,
-            Attribute::Reverse,
-            Attribute::Hidden,
-            Attribute::CrossedOut,
-            Attribute::OverLined,
-        ];
+    /// Supported attribute flags (in order).
+    pub const ATTRS: [Attribute; 14] = [
+        Attribute::Bold,
+        Attribute::Italic,
+        Attribute::Dim,
+        Attribute::Underlined,
+        Attribute::DoubleUnderlined,
+        Attribute::Undercurled,
+        Attribute::Underdotted,
+        Attribute::Underdashed,
+        Attribute::SlowBlink,
+        Attribute::RapidBlink,
+        Attribute::Reverse,
+        Attribute::Hidden,
+        Attribute::CrossedOut,
+        Attribute::OverLined,
+    ];
 
-        (0..attrs.len())
+    /// Returns true if the attributes are empty.
+    #[inline]
+    pub fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    /// Returns self extracted as [Self::ATTRS] wrapped in `Option`.
+    pub fn extract(self) -> Vec<Option<Attribute>> {
+        (0..Self::ATTRS.len())
             .into_iter()
             .map(|i| {
                 if self.0 & (1 << i) != 0 {
-                    Some(attrs[i])
+                    Some(Self::ATTRS[i])
                 } else {
                     None
                 }
@@ -35,16 +43,21 @@ impl Attrs {
             .collect()
     }
 
+    /// Applies the given attrivute to the current attributes and returns a new `Attrs` bitfield.
     pub fn apply(self, attr: Attribute) -> Self {
+        /// Sets the bit at position `n` in `num`.
         #[inline(always)]
         fn set(num: u16, n: u16) -> u16 {
             num | (1 << n)
         }
+
+        /// Unsets the bit at position `n` in `num`.
         #[inline(always)]
         fn unset(num: u16, n: u16) -> u16 {
             num & !(1 << n)
         }
 
+        /// Unsets all underline bits.
         fn unset_underline(num: u16) -> u16 {
             let ul = unset(num, 3);
             let du = unset(ul, 4);
