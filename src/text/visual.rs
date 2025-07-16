@@ -53,6 +53,12 @@ impl StyleSpan {
             length,
         }
     }
+
+    /// Returns the exclusive end grapheme index of the style span `(character + length)`
+    #[inline]
+    pub fn end(&self) -> usize {
+        self.character + self.length
+    }
 }
 
 impl VisualGrapheme {
