@@ -76,42 +76,38 @@ impl Line {
 
     /// Returns all relevant codes active at `real_index`
     pub fn active_codes_at(&self, real_index: usize) -> Vec<Code> {
-        let mut codes = HashSet::<Code>::new();
-        let mut bg = None;
-        let mut fg = None;
+        let mut codes = Vec::new();
+
+        let mut attrs = Attrs::default();
+        let mut bg = Color::Reset;
+        let mut fg = Color::Reset;
 
         for unit in &self.content[..real_index] {
             match unit {
-                StyledUnit::Code(code) => match code {
-                    Code::Attribute(attr) => {
-                        if *attr == Attribute::Reset {
-                            codes.retain(|c| !c.is_attribute())
-                        } else {
-                            codes.insert(code.clone());
-                        }
-                    }
-                    Code::Background(color) => {
-                        if *color == Color::Reset {
-                            bg = None;
-                        } else {
-                            bg = Some(*color);
-                        }
-                    }
-                    Code::Foreground(color) => {
-                        if *color == Color::Reset {
-                            fg = None;
-                        } else {
-                            fg = Some(*color);
-                        }
-                    }
+                StyledUnit::Code(code) => match *code {
+                    Code::Attribute(attr) => attrs = attrs.apply(attr),
+                    Code::Background(color) => bg = color,
+                    Code::Foreground(color) => fg = color,
                 },
                 _ => {}
             }
         }
 
-        bg.map(|color| codes.insert(Code::Background(color)));
-        fg.map(|color| codes.insert(Code::Foreground(color)));
-        codes.into_iter().collect()
+        for attr in attrs.extract() {
+            if let Some(attr) = attr {
+                codes.push(Code::Attribute(attr));
+            }
+        }
+
+        if bg != Color::Reset {
+            codes.push(Code::Background(bg));
+        }
+
+        if fg != Color::Reset {
+            codes.push(Code::Foreground(fg));
+        }
+
+        codes
     }
 
     /// Returns all relevant reset codes to end the style at `real_index`
