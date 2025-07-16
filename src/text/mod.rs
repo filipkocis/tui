@@ -1,12 +1,14 @@
+mod attrs;
 mod buffer_line;
 mod visual;
 
+pub use attrs::*;
 pub use buffer_line::*;
 pub use visual::*;
 
 use std::{ops::Range, path::Path};
 
-use crate::Code;
+use crate::{Code, code::CodeUnit};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 /// Text wrapping options
@@ -218,14 +220,6 @@ impl Text {
             return;
         }
 
-        use crossterm::style::Color;
-        #[derive(Default)]
-        struct CodeUnit {
-            fg: Option<Color>,
-            bg: Option<Color>,
-            // TODO: attrs
-        }
-
         /// Set a code range
         fn set(line: &mut Vec<CodeUnit>, code: Code, range: Range<usize>) {
             if line.len() < range.end {
@@ -234,7 +228,7 @@ impl Text {
 
             for i in range {
                 match code {
-                    Code::Attribute(_) => todo!("attrs flatten"),
+                    Code::Attribute(attr) => line[i].attrs = line[i].attrs.apply(attr),
                     Code::Background(bg) => line[i].bg = Some(bg),
                     Code::Foreground(fg) => line[i].fg = Some(fg),
                 }
@@ -251,11 +245,17 @@ impl Text {
             let mut bg = None;
             let mut bg_i = 0;
 
+            let mut attrs = Attrs::default().extract();
+            let mut attrs_i = (0..attrs.len()).collect::<Vec<_>>();
+
             for i in 0..=line.len() {
                 let unit = line.get(i);
 
                 let unit_fg = unit.and_then(|u| u.fg);
                 let unit_bg = unit.and_then(|u| u.bg);
+                let unit_attrs = unit
+                    .map(|u| u.attrs.extract())
+                    .unwrap_or_else(|| Attrs::default().extract());
 
                 if unit_fg != fg {
                     if let Some(fg) = fg {
@@ -273,6 +273,25 @@ impl Text {
 
                     bg = unit_bg;
                     bg_i = i;
+                }
+
+                for (ai, attr) in attrs.iter_mut().enumerate() {
+                    let unit_attr = unit_attrs[ai];
+                    let attr_i = &mut attrs_i[ai];
+
+                    if unit_attr != *attr {
+                        if let Some(attr) = attr {
+                            styles.push(StyleSpan::new(
+                                Code::Attribute(*attr),
+                                li,
+                                *attr_i,
+                                i - *attr_i,
+                            ));
+                        }
+
+                        *attr = unit_attr;
+                        *attr_i = i;
+                    }
                 }
             }
 
