@@ -228,9 +228,9 @@ impl Text {
 
             for i in range {
                 match code {
-                    Code::Attribute(attr) => line[i].attrs = line[i].attrs.apply(attr),
-                    Code::Background(bg) => line[i].bg = Some(bg),
-                    Code::Foreground(fg) => line[i].fg = Some(fg),
+                    Code::Attribute(attr) => line[i].apply_attr(attr),
+                    Code::Background(bg) => line[i].set_bg(bg),
+                    Code::Foreground(fg) => line[i].set_fg(fg),
                 }
             }
         }
@@ -251,10 +251,10 @@ impl Text {
             for i in 0..=line.len() {
                 let unit = line.get(i);
 
-                let unit_fg = unit.and_then(|u| u.fg);
-                let unit_bg = unit.and_then(|u| u.bg);
+                let unit_fg = unit.and_then(|u| u.fg());
+                let unit_bg = unit.and_then(|u| u.bg());
                 let unit_attrs = unit
-                    .map(|u| u.attrs.extract())
+                    .map(|u| u.attrs().extract())
                     .unwrap_or_else(|| Attrs::default().extract());
 
                 if unit_fg != fg {
