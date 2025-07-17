@@ -15,7 +15,7 @@ impl Code {
     /// Returns the reset variant of the code
     pub fn into_reset(&self) -> Self {
         match self {
-            Self::Attribute(_) => Self::Attribute(Attribute::Reset),
+            Self::Attribute(attr) => Self::Attribute(Attrs::get_reset_attr(*attr)),
             Self::Background(_) => Self::Background(Color::Reset),
             Self::Foreground(_) => Self::Foreground(Color::Reset),
         }
@@ -111,6 +111,12 @@ impl CodeUnit {
     #[inline]
     pub fn attrs(&self) -> Attrs {
         self.attrs
+    }
+
+    /// Sets the attributes, replacing any existing attributes.
+    #[inline]
+    pub fn set_attrs(&mut self, attrs: Attrs) {
+        self.attrs = attrs;
     }
 
     /// Sets a new attribute.
