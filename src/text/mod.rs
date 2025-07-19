@@ -303,6 +303,13 @@ impl Text {
             styles
         }
 
+        let text_width = self
+            .input
+            .iter()
+            .map(|l| l.width())
+            .max()
+            .unwrap_or_default();
+
         let mut line = Vec::<CodeUnit>::new();
         let mut styles = vec![];
         let mut last_line = 0;
@@ -317,7 +324,7 @@ impl Text {
                 line = Vec::new();
             }
 
-            let range = style.character..style.end();
+            let range = style.character..style.end().min(text_width);
             set(&mut line, style.code, range);
         }
 
