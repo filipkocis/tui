@@ -244,56 +244,57 @@ impl Line {
 
     /// Prune redundant codes in the line, removing any codes with no effect, such as duplicates.
     pub fn prune_redundant_codes(&mut self) {
-        // Active codes set previously in the line
-        let mut set_attrs: Option<usize> = None;
-        let mut set_fg = None;
-        let mut set_bg = None;
-
-        // Codes currently being processed before the next char
-        let mut cur_attrs: Option<usize> = None;
-        let mut cur_fg = None;
-        let mut cur_bg = None;
-
+        // New content for the line
         let mut content = Vec::new();
+
+        // Active codes set previously in the line
+        let mut set_code_unit = CodeUnit::new();
+        // Codes currently being processed before the next char
+        let mut cur_code_unit = CodeUnit::new();
 
         for unit in self.content.drain(..) {
             match unit {
                 // Set current code, but only if its not a first code == reset code
                 StyledUnit::Code(code) => match code {
-                    Code::Foreground(fg) => {
-                        if set_fg.is_none() && fg == Color::Reset {
-                            cur_fg = None;
-                            continue;
-                        }
-                        cur_fg = Some(fg);
-                    }
-                    Code::Background(bg) => {
-                        if set_bg.is_none() && bg == Color::Reset {
-                            cur_bg = None;
-                            continue;
-                        }
-                        cur_bg = Some(bg);
-                    }
-                    Code::Attribute(attr) => todo!("attr"),
+                    Code::Foreground(fg) => cur_code_unit.set_fg(fg),
+                    Code::Background(bg) => cur_code_unit.set_bg(bg),
+                    Code::Attribute(attr) => cur_code_unit.apply_attr(attr),
                 },
+
                 // Consume current codes and apply them if they are different from set codes
                 StyledUnit::Grapheme(grapheme) => {
-                    if let Some(fg) = cur_fg.take() {
-                        if set_fg != Some(fg) {
-                            content.push(StyledUnit::Code(Code::Foreground(fg)));
-                            set_fg = Some(fg);
-                        }
+                    if set_code_unit.fg() != cur_code_unit.fg() {
+                        let new_color = if let Some(fg) = cur_code_unit.fg() {
+                            fg
+                        } else {
+                            Color::Reset
+                        };
+
+                        content.push(StyledUnit::Code(Code::Foreground(new_color)));
+                        set_code_unit.set_fg(new_color);
                     }
 
-                    if let Some(bg) = cur_bg.take() {
-                        if set_bg != Some(bg) {
-                            content.push(StyledUnit::Code(Code::Background(bg)));
-                            set_bg = Some(bg);
-                        }
+                    if set_code_unit.bg() != cur_code_unit.bg() {
+                        let new_color = if let Some(bg) = cur_code_unit.bg() {
+                            bg
+                        } else {
+                            Color::Reset
+                        };
+
+                        content.push(StyledUnit::Code(Code::Background(new_color)));
+                        set_code_unit.set_bg(new_color);
                     }
 
-                    if let Some(attrs) = cur_attrs.take() {
-                        todo!("attrs")
+                    if set_code_unit.attrs() != cur_code_unit.attrs() {
+                        content.extend(
+                            set_code_unit
+                                .attrs()
+                                .into_change_codes(cur_code_unit.attrs())
+                                .into_iter()
+                                .map(|a| StyledUnit::Code(Code::Attribute(a))),
+                        );
+
+                        set_code_unit.set_attrs(cur_code_unit.attrs());
                     }
 
                     content.push(StyledUnit::Grapheme(grapheme));
@@ -303,18 +304,12 @@ impl Line {
 
         // Add final codes, only if they are reset codes and not first codes
         if content.len() != 0 {
-            let reset = Some(Color::Reset);
-            if reset == cur_fg.take() && set_fg != reset && set_fg.is_some() {
-                content.push(StyledUnit::Code(Code::Foreground(Color::Reset)));
-            }
-
-            if reset == cur_bg.take() && set_bg != reset && set_bg.is_some() {
-                content.push(StyledUnit::Code(Code::Background(Color::Reset)));
-            }
-
-            if let Some(attrs) = cur_attrs.take() {
-                todo!("attrs")
-            }
+            content.extend(
+                set_code_unit
+                    .into_reset_codes()
+                    .into_iter()
+                    .map(StyledUnit::Code),
+            );
         }
 
         self.content = content;
