@@ -239,16 +239,20 @@ impl Text {
         fn combine(line: &[CodeUnit], li: usize) -> Vec<StyleSpan> {
             let mut styles = vec![];
 
+            // Active foreground color and start index
             let mut fg = None;
             let mut fg_i = 0;
 
+            // Active background color and start index
             let mut bg = None;
             let mut bg_i = 0;
 
+            // Currently active attributes and their start indices
             let mut attrs = Attrs::default().extract();
             let mut attrs_i = (0..attrs.len()).collect::<Vec<_>>();
 
             for i in 0..=line.len() {
+                // Active codes at this index
                 let unit = line.get(i);
 
                 let unit_fg = unit.and_then(|u| u.fg());
@@ -275,22 +279,23 @@ impl Text {
                     bg_i = i;
                 }
 
-                for (ai, attr) in attrs.iter_mut().enumerate() {
+                for ai in 0..attrs.len() {
+                    let attr = attrs[ai];
                     let unit_attr = unit_attrs[ai];
-                    let attr_i = &mut attrs_i[ai];
+                    let attr_i = attrs_i[ai];
 
-                    if unit_attr != *attr {
+                    if unit_attr != attr {
                         if let Some(attr) = attr {
                             styles.push(StyleSpan::new(
-                                Code::Attribute(*attr),
+                                Code::Attribute(attr),
                                 li,
-                                *attr_i,
-                                i - *attr_i,
+                                attr_i,
+                                i - attr_i,
                             ));
                         }
 
-                        *attr = unit_attr;
-                        *attr_i = i;
+                        attrs[ai] = unit_attr;
+                        attrs_i[ai] = i;
                     }
                 }
             }
