@@ -8,8 +8,8 @@ impl Attrs {
     /// Supported attribute flags (in order).
     pub const ATTRS: [Attribute; 14] = [
         Attribute::Bold,
-        Attribute::Italic,
         Attribute::Dim,
+        Attribute::Italic,
         Attribute::Underlined,
         Attribute::DoubleUnderlined,
         Attribute::Undercurled,
@@ -33,14 +33,20 @@ impl Attrs {
     pub fn extract(self) -> Vec<Option<Attribute>> {
         (0..Self::ATTRS.len())
             .into_iter()
-            .map(|i| {
-                if self.0 & (1 << i) != 0 {
-                    Some(Self::ATTRS[i])
-                } else {
-                    None
-                }
-            })
+            .map(|i| self.get(i as u16))
             .collect()
+    }
+
+    /// Returns the attribute at position `n` in the bitfield, if it is set.
+    #[inline(always)]
+    pub fn get_bit(self, n: u16) -> bool {
+        n < Self::ATTRS.len() as u16 && (self.0 & (1 << n)) != 0
+    }
+
+    /// Returns the attribute at position `n` in the bitfield, if it is set.
+    #[inline(always)]
+    pub fn get(self, n: u16) -> Option<Attribute> {
+        self.get_bit(n).then(|| Self::ATTRS[n as usize])
     }
 
     /// Sets the bit at position `n` in the bitfield.
@@ -55,10 +61,10 @@ impl Attrs {
         Self(self.0 & !(1 << n))
     }
 
-    /// Unsets all underline attributes.
-    pub fn unset_underline(self) -> Attrs {
-        self.unset(3) // underline
-            .unset(4) // double underline
+    /// Unsets all underlined attributes.
+    pub fn unset_underlined(self) -> Attrs {
+        self.unset(3) // underlined
+            .unset(4) // double underlined
             .unset(5) // undercurled
             .unset(6) // underdotted
             .unset(7) // underdashed
@@ -69,20 +75,20 @@ impl Attrs {
         match attr {
             Attribute::Reset => Self::default(),
 
-            Attribute::Bold => self.unset(2).set(0),
+            Attribute::Bold => self.unset(1).set(0),
             Attribute::NoBold => self.unset(0),
+            Attribute::Dim => self.unset(0).set(1),
+            Attribute::NormalIntensity => self.unset(0).unset(1),
 
-            Attribute::Italic => self.set(1),
-            Attribute::NoItalic => self.unset(1),
+            Attribute::Italic => self.set(2),
+            Attribute::NoItalic => self.unset(2),
 
-            Attribute::Dim => self.unset(0).set(2),
-            Attribute::NormalIntensity => self.unset(0).unset(1).unset(2),
-
-            Attribute::Underlined => self.unset_underline().set(3),
-            Attribute::DoubleUnderlined => self.unset_underline().set(4),
-            Attribute::Undercurled => self.unset_underline().set(5),
-            Attribute::Underdotted => self.unset_underline().set(6),
-            Attribute::Underdashed => self.unset_underline().set(7),
+            Attribute::Underlined => self.unset_underlined().set(3),
+            Attribute::DoubleUnderlined => self.unset_underlined().set(4),
+            Attribute::Undercurled => self.unset_underlined().set(5),
+            Attribute::Underdotted => self.unset_underlined().set(6),
+            Attribute::Underdashed => self.unset_underlined().set(7),
+            Attribute::NoUnderline => self.unset_underlined(),
 
             Attribute::SlowBlink => self.unset(9).set(8),
             Attribute::RapidBlink => self.unset(8).set(9),
