@@ -115,6 +115,35 @@ impl Attrs {
             _ => self,
         }
     }
+
+    /// Returns the reset attribute for the given attribute.
+    /// # Panics
+    /// If the attribute cannot bve reset or is not supported. See [Attrs::ATTRS].
+    #[inline]
+    pub fn get_reset_attr(attr: Attribute) -> Attribute {
+        let reset_attr = match attr {
+            Attribute::Bold | Attribute::Dim => Attribute::NormalIntensity,
+
+            Attribute::Italic => Attribute::NoItalic,
+
+            Attribute::Underlined
+            | Attribute::DoubleUnderlined
+            | Attribute::Undercurled
+            | Attribute::Underdotted
+            | Attribute::Underdashed => Attribute::NoUnderline,
+
+            Attribute::SlowBlink | Attribute::RapidBlink => Attribute::NoBlink,
+
+            Attribute::Reverse => Attribute::NoReverse,
+            Attribute::Hidden => Attribute::NoHidden,
+            Attribute::CrossedOut => Attribute::NotCrossedOut,
+            Attribute::OverLined => Attribute::NotOverLined,
+
+            _ => panic!("Should not happen, got {attr:?}"),
+        };
+
+        reset_attr
+    }
 }
 
 impl Iterator for Attrs {
