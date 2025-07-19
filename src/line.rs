@@ -1,13 +1,13 @@
 use std::fmt::Display;
 
-use crossterm::style::{Attribute, Color};
+use crossterm::style::Color;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
     Code,
     code::CodeUnit,
-    text::{Attrs, StyledUnit, VisualGrapheme},
+    text::{StyledUnit, VisualGrapheme},
 };
 
 #[derive(Debug, Default, Clone)]
