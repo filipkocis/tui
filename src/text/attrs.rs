@@ -144,6 +144,35 @@ impl Attrs {
 
         reset_attr
     }
+
+    /// Returns the reset codes for this attribute bitfield. May also return **set** codes if the
+    /// reset codes apply to multiple but not all fields from `other` bitfield.
+    /// Additional **set** codes are returned if the `other` bitfield has attributes that are not in
+    /// `self`.
+    pub fn into_change_codes(self, other: Self) -> Vec<Attribute> {
+        let mut reset_codes = Vec::new();
+        let mut set_codes = Vec::new();
+
+        // Check each attribute in the current bitfield
+        for (i, &attr) in Self::ATTRS.iter().enumerate() {
+            let self_bit = self.0 & (1 << i) != 0;
+            let other_bit = other.0 & (1 << i) != 0;
+
+            if self_bit {
+                // If the attribute is set in `self` but not in `other`, add its reset code
+                if !other_bit {
+                    reset_codes.push(Self::get_reset_attr(attr));
+                }
+            } else if other_bit {
+                // If the attribute is set in `other` but not in `self`, add it as a set code
+                set_codes.push(attr);
+            }
+        }
+
+        // Combine reset and set codes
+        reset_codes.extend(set_codes);
+        reset_codes
+    }
 }
 
 impl Iterator for Attrs {
