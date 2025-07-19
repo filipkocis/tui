@@ -86,7 +86,22 @@ impl Draggable {
         modifiers: KeyModifiers,
     ) -> Node {
         let mut node = Node::default();
+        Self::apply(&mut node, area_x, area_y, modifiers);
+        node
+    }
 
+    /// Applies the draggable behavior to the given `node`.
+    /// The node will be draggable within the specified `area_x` and `area_y` if the `modifiers`
+    /// are used during he left-click drag event.
+    /// # Notes
+    /// Areas are restrictive, meaning that if they are `None`, the node can be dragged anywhere.
+    /// Applying multiple draggable areas to the same node will cause unexpected behavior.
+    pub fn apply(
+        node: &mut Node,
+        area_x: Option<(u16, u16)>,
+        area_y: Option<(u16, u16)>,
+        modifiers: KeyModifiers,
+    ) {
         let on_drag = move |c: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
 
@@ -118,8 +133,6 @@ impl Draggable {
             result.update_hold_y = true;
             result
         };
-
         node.add_handler(on_drag_handler(on_drag), true);
-        node
     }
 }

@@ -5,9 +5,18 @@ use super::{MouseDragEvent, OnDragResult, on_drag_handler};
 pub struct Resizable;
 
 impl Resizable {
+    /// Creates a new [Node] with resizable functionality in both x and y directions.
     pub fn new(allow_x_resize: bool, allow_y_resize: bool) -> Node {
         let mut node = Node::default();
+        Self::apply(&mut node, allow_x_resize, allow_y_resize);
+        node
+    }
 
+    /// Applies resizable functionality to the given [Node]. Adds a mouse drag handler that allows
+    /// resizing the node at its edges.
+    /// # Notes
+    /// Applying this multiple times to the same node will cause unexpected behavior.
+    pub fn apply(node: &mut Node, allow_x_resize: bool, allow_y_resize: bool) {
         let on_drag = move |ctx: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
 
@@ -57,7 +66,5 @@ impl Resizable {
             result
         };
         node.add_handler(on_drag_handler(on_drag), true);
-
-        node
     }
 }
