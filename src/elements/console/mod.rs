@@ -1,3 +1,6 @@
+#[cfg(feature = "console_logger")]
+pub mod logger;
+
 use std::{
     collections::VecDeque,
     sync::{LazyLock, RwLock},
@@ -217,21 +220,9 @@ impl Console {
         }
     }
 
-    /// Prints a message to console
+    /// Logs a message to console
     #[inline]
-    pub fn print(text: impl Into<String>) {
+    pub fn log(text: impl Into<String>) {
         push_history(Entry::Info(text.into()))
-    }
-
-    /// Prints a warning message to console
-    #[inline]
-    pub fn warn(text: impl Into<String>) {
-        push_history(Entry::Warn(text.into()))
-    }
-
-    /// Prints an error message to console
-    #[inline]
-    pub fn error(text: impl Into<String>) {
-        push_history(Entry::Error(text.into()))
     }
 }
