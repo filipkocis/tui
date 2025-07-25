@@ -119,7 +119,7 @@ impl Workers {
                     f(context);
 
                     // Log end of thread
-                    crate::Console::print(format!("Worker thread {thread_name} shutting down"));
+                    info!("Worker thread {thread_name} shutting down");
                 }));
             })
             .expect("Could not create worker thread");

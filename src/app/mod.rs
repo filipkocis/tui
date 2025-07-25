@@ -76,11 +76,11 @@ impl App {
             } else {
                 // Log the panic
                 // ThreadId(n) "thread name" panicked at path/to/file:\n payload
-                crate::Console::error(format!(
+                error!(
                     "{current_id:?} {:?} {}",
                     current_thread.name().unwrap_or("unknown"),
                     panic_info.to_string(),
-                ));
+                );
             }
         }));
     }

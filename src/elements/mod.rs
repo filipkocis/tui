@@ -1,5 +1,5 @@
 mod button;
-mod console;
+pub mod console;
 mod dialog;
 mod drag;
 mod input;
