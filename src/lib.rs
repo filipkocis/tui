@@ -21,7 +21,7 @@ pub use elements::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use line::Line;
 pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle};
-pub use style::{Offset, Padding, Size, SizeValue, Style};
+pub use style::{Offset, Padding, Size, SizeValue, Style, Justify, Align};
 pub use workers::{Message, WorkerContext};
 
 pub use crossterm::{self};

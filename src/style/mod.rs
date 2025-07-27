@@ -1,10 +1,12 @@
 mod offset;
 mod padding;
 mod size;
+mod alignment;
 
 pub use offset::Offset;
 pub use padding::Padding;
 pub use size::{Size, SizeValue};
+pub use alignment::{Justify, Align};
 
 use crossterm::style::Color;
 
@@ -31,6 +33,7 @@ pub struct Style {
     pub padding: Padding,
     pub border: (bool, bool, bool, bool, Option<Color>),
 
+    pub justify: Justify,
     pub flex_row: bool,
     // pub grow: bool,
     pub gap: (u16, u16),

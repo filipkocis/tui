@@ -139,8 +139,9 @@ impl Console {
         let mut window_bar = Node::default();
         window_bar.style.size = Size::parse("100%", "1").unwrap();
         window_bar.style.bg = Some(Hsl::new(0.0, 0.0, 0.3).into());
-        window_bar.style.gap = (WIDTH - (7 + 3), 0);
+        window_bar.style.gap = (1, 0);
         window_bar.style.flex_row = true;
+        window_bar.style.justify = Justify::SpaceBetween;
 
         let mut label = Node::default();
         label.text = "Console".into();
