@@ -123,13 +123,9 @@ impl Canvas {
     }
 
     /// Add (top, bottom, left, right) padding
-    pub fn add_padding(&mut self, padding: Padding) {
-        let top = padding.top as usize;
-        let bottom = padding.bottom as usize;
-        let left = padding.left as usize;
-        let right = padding.right as usize;
-
-        let max_len = self.width();
+    pub fn add_padding(&mut self, style: &Style) {
+        let (top, right, bottom, left) = style.padding.tuple();
+        let max_len = style.clamped_width() as usize;
 
         for _ in 0..top {
             self.buffer.insert(0, Line::new(max_len));

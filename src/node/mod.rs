@@ -238,7 +238,6 @@ impl Node {
         size
     }
 
-
     /// Adds a child node to the current node. The child node's parent will be set `parent`, make
     /// sure the `parent` is a weak handle to this node.
     #[inline]
@@ -515,7 +514,7 @@ impl Node {
         canvas.normalize(&self.style);
 
         // Add block styling
-        canvas.add_padding(self.style.padding);
+        canvas.add_padding(&self.style);
         canvas.add_fg(self.style.fg);
         canvas.add_bg(self.style.bg);
         canvas.add_border(self.style.border);
