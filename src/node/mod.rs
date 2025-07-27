@@ -471,12 +471,34 @@ impl Node {
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
 
+            // Add extra offset for flex alignment
+            let extra_align_offset = if self.style.align.is_center() {
+                if self.style.flex_row {
+                    let o = self.style.clamped_height() as i32 - child.style.total_height() as i32;
+                    (0, o as i16 / 2)
+                } else {
+                    let o = self.style.clamped_width() as i32 - child.style.total_height() as i32;
+                    (o as i16 / 2, 0)
+                }
+            } else if self.style.align.is_end() {
+                if self.style.flex_row {
+                    let o = self.style.clamped_height() as i32 - child.style.total_height() as i32;
+                    (0, o as i16)
+                } else {
+                    let o = self.style.clamped_width() as i32 - child.style.total_width() as i32;
+                    (o as i16, 0)
+                }
+            } else {
+                (0, 0)
+            };
+
             if child.style.offset.is_absolutely_relative() {
                 // Use parent's 0,0 for absolutely relative children
                 child.calculate_canvas(content_position);
             } else {
-                // Accumulate relative position offset
-                let child_start_position = content_position.add_tuple(extra_offset);
+                let child_start_position = content_position
+                    .add_tuple(extra_offset) // Add accumulated extra positioning offset
+                    .add_tuple(extra_align_offset); // Add extra offset for flex alignment
                 child.calculate_canvas(child_start_position);
             }
 

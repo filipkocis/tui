@@ -51,3 +51,35 @@ impl Justify {
         self.is_space_between() || self.is_space_around()
     }
 }
+
+/// Align items in the cross axis of the flex container
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum Align {
+    /// Start of the cross axis
+    #[default]
+    Start,
+    /// Center of the cross axis
+    Center,
+    /// End of the cross axis
+    End,
+}
+
+impl Align {
+    /// True if self is [Align::Start] variant
+    #[inline(always)]
+    pub fn is_start(self) -> bool {
+        matches!(self, Align::Start)
+    }
+
+    /// True if self is [Align::Center] variant
+    #[inline(always)]
+    pub fn is_center(self) -> bool {
+        matches!(self, Align::Center)
+    }
+
+    /// True if self is [Align::End] variant
+    #[inline(always)]
+    pub fn is_end(self) -> bool {
+        matches!(self, Align::End)
+    }
+}

@@ -34,6 +34,7 @@ pub struct Style {
     pub border: (bool, bool, bool, bool, Option<Color>),
 
     pub justify: Justify,
+    pub align: Align,
     pub flex_row: bool,
     // pub grow: bool,
     pub gap: (u16, u16),
