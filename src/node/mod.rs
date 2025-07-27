@@ -471,26 +471,11 @@ impl Node {
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
 
-            // Add extra offset for flex alignment
-            let extra_align_offset = if self.style.align.is_center() {
-                if self.style.flex_row {
-                    let o = self.style.clamped_height() as i32 - child.style.total_height() as i32;
-                    (0, o as i16 / 2)
-                } else {
-                    let o = self.style.clamped_width() as i32 - child.style.total_height() as i32;
-                    (o as i16 / 2, 0)
-                }
-            } else if self.style.align.is_end() {
-                if self.style.flex_row {
-                    let o = self.style.clamped_height() as i32 - child.style.total_height() as i32;
-                    (0, o as i16)
-                } else {
-                    let o = self.style.clamped_width() as i32 - child.style.total_width() as i32;
-                    (o as i16, 0)
-                }
-            } else {
-                (0, 0)
-            };
+            // Get extra offset for flex alignment
+            let extra_align_offset = self
+                .style
+                .align
+                .get_child_extra_offset(&self.style, &child.style);
 
             if child.style.offset.is_absolutely_relative() {
                 // Use parent's 0,0 for absolutely relative children

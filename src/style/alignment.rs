@@ -1,3 +1,5 @@
+use crate::{Size, Style};
+
 /// Justify content in the direction of the flex container
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Justify {
@@ -81,5 +83,31 @@ impl Align {
     #[inline(always)]
     pub fn is_end(self) -> bool {
         matches!(self, Align::End)
+    }
+
+    /// Returns the offset for aligning an item within a container of given size.
+    #[inline(always)]
+    pub fn alignment_offset(self, container_size: u16, item_size: u16) -> i32 {
+        match self {
+            Self::Start => 0,
+            Self::Center => (container_size as i32 - item_size as i32) / 2,
+            Self::End => container_size as i32 - item_size as i32,
+        }
+    }
+
+    /// Returns the offset for aligning a child within a parent node.
+    pub fn get_child_extra_offset(self, container: &Style, item: &Style) -> (i16, i16) {
+        let (container_size, item_size) = if container.flex_row {
+            (container.clamped_height(), item.total_height())
+        } else {
+            (container.clamped_height(), item.total_height())
+        };
+
+        let offset = self.alignment_offset(container_size, item_size);
+        if container.flex_row {
+            (0, offset as i16)
+        } else {
+            (offset as i16, 0)
+        }
     }
 }
