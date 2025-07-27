@@ -52,6 +52,30 @@ impl Justify {
     pub fn is_spaced(self) -> bool {
         self.is_space_between() || self.is_space_around()
     }
+
+    /// Returns the offset for justifying an item within a container of given size.
+    #[inline(always)]
+    pub fn get_start_offset(
+        self,
+        free_content_size: i16,
+        item_count: usize,
+        flex_row: bool,
+    ) -> (i16, i16) {
+        let offset = match self {
+            Self::Center => free_content_size / 2,
+            Self::End => free_content_size,
+            Self::SpaceAround => {
+                (free_content_size / (item_count + 1) as i16).max(0)
+            }
+            _ => 0,
+        };
+
+        if flex_row {
+            (offset, 0)
+        } else {
+            (0, offset)
+        }
+    }
 }
 
 /// Align items in the cross axis of the flex container

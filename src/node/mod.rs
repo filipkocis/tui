@@ -446,41 +446,28 @@ impl Node {
             free_height - (gap_count * self.style.gap.1 as i16)
         };
 
-        // Add start offset for justify-content to extra_offset
-        if self.style.justify.is_end() {
-            if self.style.flex_row {
-                extra_offset.0 = free_content_size;
-            } else {
-                extra_offset.1 = free_content_size;
-            }
-        } else if self.style.justify.is_center() {
-            if self.style.flex_row {
-                extra_offset.0 = free_content_size / 2;
-            } else {
-                extra_offset.1 = free_content_size / 2;
-            }
-        } else if self.style.justify.is_space_around() {
-            let start_offset = (free_content_size / (relative_children_count + 1) as i16).max(0);
-            if self.style.flex_row {
-                extra_offset.0 += start_offset;
-            } else {
-                extra_offset.1 += start_offset;
-            }
-        }
+        // Add extra start offset from justify-content
+        let extra_justify_start_offset = self.style.justify.get_start_offset(
+            free_content_size,
+            relative_children_count,
+            self.style.flex_row,
+        );
+        extra_offset.0 += extra_justify_start_offset.0;
+        extra_offset.1 += extra_justify_start_offset.1;
 
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
-
-            // Get extra offset for flex alignment
-            let extra_align_offset = self
-                .style
-                .align
-                .get_child_extra_offset(&self.style, &child.style);
 
             if child.style.offset.is_absolutely_relative() {
                 // Use parent's 0,0 for absolutely relative children
                 child.calculate_canvas(content_position);
             } else {
+                // Get extra offset for flex alignment
+                let extra_align_offset = self
+                    .style
+                    .align
+                    .get_child_extra_offset(&self.style, &child.style);
+
                 let child_start_position = content_position
                     .add_tuple(extra_offset) // Add accumulated extra positioning offset
                     .add_tuple(extra_align_offset); // Add extra offset for flex alignment
