@@ -430,6 +430,44 @@ impl Node {
 
         let mut extra_offset = (0, y_after_text);
         let mut include_gap = false;
+
+        let (relative_children_count, relative_children_size) =
+            self.justify_relative_children_data();
+
+        // Calculate the free content size, content_size - children_sizes
+        let gap_count = relative_children_count.saturating_sub(1) as i16;
+        let free_content_size = if self.style.flex_row {
+            let content_width = self.style.clamped_width();
+            let free_width = (content_width as i32 - relative_children_size as i32) as i16;
+            free_width - (gap_count * self.style.gap.0 as i16)
+        } else {
+            let content_height = self.style.clamped_height();
+            let free_height = (content_height as i32 - relative_children_size as i32) as i16;
+            free_height - (gap_count * self.style.gap.1 as i16)
+        };
+
+        // Add start offset for justify-content to extra_offset
+        if self.style.justify.is_end() {
+            if self.style.flex_row {
+                extra_offset.0 = free_content_size;
+            } else {
+                extra_offset.1 = free_content_size;
+            }
+        } else if self.style.justify.is_center() {
+            if self.style.flex_row {
+                extra_offset.0 = free_content_size / 2;
+            } else {
+                extra_offset.1 = free_content_size / 2;
+            }
+        } else if self.style.justify.is_space_around() {
+            let start_offset = (free_content_size / (relative_children_count + 1) as i16).max(0);
+            if self.style.flex_row {
+                extra_offset.0 += start_offset;
+            } else {
+                extra_offset.1 += start_offset;
+            }
+        }
+
         for (i, child) in self.children.iter().enumerate() {
             let mut child = child.borrow_mut();
 
@@ -437,7 +475,7 @@ impl Node {
                 // Use parent's 0,0 for absolutely relative children
                 child.calculate_canvas(content_position);
             } else {
-                // Accumulate offset for relative children
+                // Accumulate relative position offset
                 let child_start_position = content_position.add_tuple(extra_offset);
                 child.calculate_canvas(child_start_position);
             }
@@ -452,6 +490,24 @@ impl Node {
                 extra_offset.0 += child.canvas.width() as i16 + self.style.gap.0 as i16;
             } else {
                 extra_offset.1 += child.canvas.height() as i16 + self.style.gap.1 as i16;
+            }
+
+            // Increment the canvas offset with justify spaced logic
+            if self.style.justify.is_spaced() {
+                let adjust_count = if self.style.justify.is_space_around() {
+                    1 // adds an extra start offset
+                } else {
+                    -1 // between two children
+                };
+
+                let offset = (free_content_size
+                    / (relative_children_count as isize + adjust_count) as i16)
+                    .max(0);
+                if self.style.flex_row {
+                    extra_offset.0 += offset;
+                } else {
+                    extra_offset.1 += offset;
+                }
             }
 
             // Add the child canvas to this node's canvas
@@ -603,5 +659,32 @@ impl Node {
         }
 
         false
+    }
+
+    /// Returns the data necessary to justify-content, which is the number of relative
+    /// children and their cumulative width or height, depending on the flex direction.
+    #[inline]
+    fn justify_relative_children_data(&self) -> (usize, u16) {
+        let mut width = 0u16;
+        let mut height = 0u16;
+        let mut count = 0;
+
+        for child in &self.children {
+            let child = child.borrow();
+            if child.style.offset.is_absolute() {
+                continue;
+            }
+
+            let (w, h) = child.style.total_size();
+            width = width.saturating_add(w);
+            height = height.saturating_add(h);
+            count += 1;
+        }
+
+        if self.style.flex_row {
+            (count, width)
+        } else {
+            (count, height)
+        }
     }
 }
