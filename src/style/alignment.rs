@@ -14,6 +14,8 @@ pub enum Justify {
     SpaceBetween,
     /// Space around items
     SpaceAround,
+    /// Space evenly distributed
+    SpaceEvenly,
 }
 
 impl Justify {
@@ -47,10 +49,16 @@ impl Justify {
         matches!(self, Justify::SpaceAround)
     }
 
-    /// True if self is [Justify::SpaceBetween] or [Justify::SpaceAround] variant
+    /// True if self is [Justify::SpaceEvenly] variant
+    #[inline(always)]
+    pub fn is_space_evenly(self) -> bool {
+        matches!(self, Justify::SpaceEvenly)
+    }
+
+    /// True if self is any of the space variants
     #[inline(always)]
     pub fn is_spaced(self) -> bool {
-        self.is_space_between() || self.is_space_around()
+        self.is_space_between() || self.is_space_around() || self.is_space_evenly()
     }
 
     /// Returns the offset for justifying an item within a container of given size.
@@ -64,17 +72,12 @@ impl Justify {
         let offset = match self {
             Self::Center => free_content_size / 2,
             Self::End => free_content_size,
-            Self::SpaceAround => {
-                (free_content_size / (item_count + 1) as i16).max(0)
-            }
+            Self::SpaceAround => (free_content_size / item_count as i16 / 2).max(0),
+            Self::SpaceEvenly => (free_content_size / (item_count + 1) as i16).max(0),
             _ => 0,
         };
 
-        if flex_row {
-            (offset, 0)
-        } else {
-            (0, offset)
-        }
+        if flex_row { (offset, 0) } else { (0, offset) }
     }
 }
 

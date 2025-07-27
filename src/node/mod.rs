@@ -488,15 +488,15 @@ impl Node {
 
             // Increment the canvas offset with justify spaced logic
             if self.style.justify.is_spaced() {
-                let adjust_count = if self.style.justify.is_space_around() {
-                    1 // adds an extra start offset
+                let adjusted_children_count = if self.style.justify.is_space_evenly() {
+                    relative_children_count + 1 // adds an extra start offset
+                } else if self.style.justify.is_space_between() {
+                    relative_children_count - 1 // between two children
                 } else {
-                    -1 // between two children
+                    relative_children_count // no adjustment
                 };
 
-                let offset = (free_content_size
-                    / (relative_children_count as isize + adjust_count) as i16)
-                    .max(0);
+                let offset = (free_content_size / adjusted_children_count as i16).max(0);
                 if self.style.flex_row {
                     extra_offset.0 += offset;
                 } else {
