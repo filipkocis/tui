@@ -146,13 +146,9 @@ impl Canvas {
     }
 
     /// Add border
-    pub fn add_border(&mut self, border: (bool, bool, bool, bool, Option<Color>)) {
-        let has_top = border.0;
-        let has_bottom = border.1;
-        let has_left = border.2;
-        let has_right = border.3;
+    pub fn add_border(&mut self, style: &Style) {
+        let (has_top, has_bottom, has_left, has_right, border_color) = style.border;
 
-        let border_color = border.4;
         let fg_reset_code = StyledUnit::Code(Code::Foreground(Color::Reset));
 
         let style_top = StyledUnit::grapheme("─");
@@ -165,11 +161,7 @@ impl Canvas {
         let bottom_left = StyledUnit::grapheme("╰");
         let bottom_right = StyledUnit::grapheme("╯");
 
-        let chars_width = if self.buffer.len() > 0 {
-            self.buffer[0].width()
-        } else {
-            0
-        };
+        let chars_width = style.clamped_width() as usize + style.padding.horizontal() as usize;
 
         if has_top {
             let mut content = vec![style_top; chars_width];

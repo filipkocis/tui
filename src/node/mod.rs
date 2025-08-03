@@ -517,7 +517,7 @@ impl Node {
         canvas.add_padding(&self.style);
         canvas.add_fg(self.style.fg);
         canvas.add_bg(self.style.bg);
-        canvas.add_border(self.style.border);
+        canvas.add_border(&self.style);
 
         self.canvas = canvas;
     }
