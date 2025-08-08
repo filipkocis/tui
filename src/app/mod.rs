@@ -37,9 +37,6 @@ pub struct App {
     viewport: Viewport,
 
     pub(crate) context: AppContext,
-    should_resize: Option<(u16, u16)>,
-    should_compute: bool,
-    should_render: bool,
     should_draw: bool,
     should_quit: bool,
 }
@@ -100,9 +97,6 @@ impl App {
             viewport: Viewport::new(width, height),
 
             context,
-            should_resize: None,
-            should_compute: false,
-            should_render: false,
             should_draw: false,
             should_quit: false,
         }
@@ -129,54 +123,17 @@ impl App {
         Ok(())
     }
 
-    /// Prepares the application for resizing, causes full recompute of the layout
-    pub fn resize(&mut self) -> io::Result<()> {
-        let Some((width, height)) = self.should_resize.take() else {
-            return Ok(());
-        };
-
-        self.viewport.max = (width, height);
-        self.viewport.screen = (width, height);
-        self.context.screen_size = self.viewport.screen;
-        self.canvas = Canvas::new(width as usize, height as usize);
-        self.hitmap.resize(width, height);
-
-        self.should_compute = true;
-        Ok(())
-    }
-
-    /// Recomputes the application layout if `self.should_compute` is true. Causes a full render
-    pub fn compute(&mut self) -> io::Result<()> {
-        if !self.should_compute {
-            return Ok(());
-        }
-        self.should_compute = false;
-
-        let (width, height) = self.viewport.screen;
-
-        self.root
-            .borrow_mut()
-            .compute(Offset::default(), Size::from_cells(width, height));
-
-        self.should_render = true;
-        Ok(())
-    }
-
-    /// Renders the application to the canvas and hitmap if `self.should_render` is true. Causes a
-    /// full redraw
-    pub fn render(&mut self) -> io::Result<()> {
-        if !self.should_render {
-            return Ok(());
-        }
-        self.should_render = false;
-
+    /// Renders the application to the canvas and hitmap with the given viewport.
+    /// This method should be called after the layout has been computed.
+    /// Prepares the application for drawing.
+    pub fn render(&mut self, viewport: Viewport) {
         self.root
             .borrow()
-            .render_to(self.viewport, &mut self.canvas, &mut self.hitmap);
+            .render_to(viewport, &mut self.canvas, &mut self.hitmap);
         self.canvas.prune_redundant_codes();
 
+        // TODO: add minimal viewport mechanism to drawing
         self.should_draw = true;
-        Ok(())
     }
 
     /// Draws the application to the terminal if `self.should_draw` is true.
@@ -224,7 +181,7 @@ impl App {
                 // self.should_resize = Some(self.viewport.screen); // just for debug, remove later
             }
             CEvent::Resize(width, height) => {
-                self.should_resize = Some((width, height));
+                self.context.emmit(Action::Resize(width, height));
                 println!("Resize {width}x{height}")
             }
             CEvent::Paste(paste) => self.dispatch_paste_event(paste),
@@ -252,9 +209,10 @@ impl App {
     }
 
     /// Runs the main application loop.
-    pub fn run(&mut self) -> io::Result<()> {
+    pub fn run_original(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
-        self.should_resize = Some(self.viewport.screen);
+        let (width, height) = self.viewport.screen;
+        self.context.emmit(Action::Resize(width, height));
 
         let mut cleanup_time = Instant::now();
         let mut dynamic_timeout = DynamicTimeout::new(0.1, 1.0);
@@ -290,10 +248,6 @@ impl App {
                 return Ok(());
             }
 
-            self.resize()?;
-            self.compute()?;
-
-            self.render()?;
             self.draw()?;
         }
     }

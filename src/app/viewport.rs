@@ -17,6 +17,13 @@ impl Viewport {
         }
     }
 
+    /// Creates a new viewport with `max` and `screen` set to `(width, height)`
+    #[inline]
+    pub fn resize(&mut self, width: u16, height: u16) {
+        self.screen = (width, height);
+        self.max = (width, height);
+    }
+
     pub fn debug_render(&self) {
         let mut hitmap = crate::HitMap::new(self.screen.0 as usize, self.screen.1 as usize);
 
