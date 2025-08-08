@@ -194,21 +194,35 @@ impl ActionHandling for App {
 
 impl App {
     /// Handles all actions in the queue.
+    /// # Note
+    /// Some actions may add new actions to the queue, so this method will
+    /// continue processing until the queue is empty.
     pub fn handle_actions(&mut self) -> std::io::Result<()> {
-        let mut recomputed = Vec::<WeakNodeHandle>::new();
-
-        for action in self.context.actions.drain() {
-            match &action {
-                Action::RecomputeNode(weak) => {
-                    if recomputed.iter().any(|r| r.is_equal(weak)) {
-                        continue; // Already recomputed this node
-                    }
-                    recomputed.push(weak.clone());
-                }
-                _ => {}
+        let mut count = 0;
+        while !self.context.actions.is_empty() {
+            // Prevent infinite loops in case of a bug
+            if count > 1_000 {
+                let err = "Too many actions, possible infinite loop detected.";
+                error!("{err}");
+                panic!("{err}, {:?}", self.context.actions.queue.borrow());
             }
+            count += 1;
 
-            self.handle_action(action)?
+            let mut recomputed = Vec::<WeakNodeHandle>::new();
+
+            for action in self.context.actions.drain() {
+                match &action {
+                    Action::RecomputeNode(weak) => {
+                        if recomputed.iter().any(|r| r.is_equal(weak)) {
+                            continue; // Already recomputed this node
+                        }
+                        recomputed.push(weak.clone());
+                    }
+                    _ => {}
+                }
+
+                self.handle_action(action)?
+            }
         }
 
         Ok(())
@@ -293,9 +307,6 @@ impl App {
         // Render the tree using the minimal viewport or the cached viewport which is the
         // parent's content size.
         drop(node);
-        self.root
-            .borrow()
-            .render_to(cached_viewport, &mut self.canvas, &mut self.hitmap);
-        self.should_draw = true;
+        self.render(cached_viewport);
     }
 }
