@@ -15,6 +15,10 @@ use crate::{
 pub enum Action {
     /// Quit the application
     Quit,
+    /// Refresh the application by recomputing and re-rendering the root node.
+    Refresh,
+    /// Resize and refresh the application.
+    Resize(u16, u16),
     /// Emmit an event to the application.
     /// This may cause an `event -> action -> event` loop.
     EmmitEvent(crossterm::event::Event),
@@ -57,13 +61,15 @@ impl Action {
 
         match self {
             Self::Quit => "Quit".into(),
+            Self::Refresh => "Refresh".into(),
+            Self::Resize(w, h) => format!("Resize({w}, {h})"),
             Self::EmmitEvent(e) => format!("EmmitEvent({e:?})"),
             Self::KeyInputs(k) => format!("KeyInputs({:?})", map_inputs(k)),
             Self::FocusNext => "FocusNext".into(),
             Self::FocusPrevious => "FocusPrevious".into(),
             Self::FocusNode(n) => format!("FocusNode({})", node_id(n)),
             Self::RecomputeNode(n) => format!("RecomputeNode({})", node_id(n)),
-            Self::RemoveNode(id) => format!("RemoveNode({:?})", id),
+            Self::RemoveNode(id) => format!("RemoveNode({id:?})"),
         }
     }
 }
@@ -113,6 +119,23 @@ impl ActionHandling for App {
     fn handle_action(&mut self, action: Action) -> std::io::Result<()> {
         match action {
             Action::Quit => self.should_quit = true,
+            Action::Refresh => {
+                // Recompute the root node
+                self.root
+                    .borrow_mut()
+                    .compute(Offset::default(), self.context.screen_size.into());
+
+                // Render the root node to the canvas
+                self.render(self.viewport);
+            }
+            Action::Resize(width, height) => {
+                self.canvas = Canvas::new(width as usize, height as usize);
+                self.viewport.resize(width, height);
+                self.hitmap.resize(width, height);
+                self.context.screen_size = (width, height);
+
+                self.context.emmit(Action::Refresh);
+            }
             Action::EmmitEvent(event) => self.handle_crossterm_event(event)?,
             Action::KeyInputs(key_inputs) => {
                 for (key, modifiers) in key_inputs {

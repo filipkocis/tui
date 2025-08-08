@@ -123,3 +123,15 @@ impl Size {
         (self.width.computed_size(), self.height.computed_size())
     }
 }
+
+impl From<(SizeValue, SizeValue)> for Size {
+    fn from(value: (SizeValue, SizeValue)) -> Self {
+        Self::new(value.0, value.1)
+    }
+}
+
+impl From<(u16, u16)> for Size {
+    fn from(value: (u16, u16)) -> Self {
+        Self::from_cells(value.0, value.1)
+    }
+}
