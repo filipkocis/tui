@@ -178,7 +178,6 @@ impl App {
             CEvent::Key(key_event) => self.dispatch_key_event(key_event),
             CEvent::Mouse(mouse_event) => {
                 self.dispatch_mouse_event(mouse_event);
-                // self.should_resize = Some(self.viewport.screen); // just for debug, remove later
             }
             CEvent::Resize(width, height) => {
                 self.context.emmit(Action::Resize(width, height));
@@ -209,7 +208,7 @@ impl App {
     }
 
     /// Runs the main application loop.
-    pub fn run_original(&mut self) -> io::Result<()> {
+    pub fn run(&mut self) -> io::Result<()> {
         self.prepare_screen()?;
         let (width, height) = self.viewport.screen;
         self.context.emmit(Action::Resize(width, height));

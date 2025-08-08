@@ -183,7 +183,7 @@ impl ActionHandling for App {
             Action::RecomputeNode(node_weak) => self.handle_recompute_node_action(node_weak),
             Action::RemoveNode(id) => {
                 if let Some(parent) = self.remove_node(id).map(|(parent, _)| parent) {
-                    self.handle_recompute_node_action(parent);
+                    self.context.emmit(Action::RecomputeNode(parent))
                 }
             }
         }
@@ -209,8 +209,10 @@ impl App {
             count += 1;
 
             let mut recomputed = Vec::<WeakNodeHandle>::new();
+            let mut latest_resize = None;
+            let mut should_refresh = false;
 
-            for action in self.context.actions.drain() {
+            for action in self.context.actions.drain().into_iter() {
                 match &action {
                     Action::RecomputeNode(weak) => {
                         if recomputed.iter().any(|r| r.is_equal(weak)) {
@@ -218,10 +220,26 @@ impl App {
                         }
                         recomputed.push(weak.clone());
                     }
+                    Action::Resize(w, h) => {
+                        latest_resize = Some((*w, *h));
+                        continue;
+                    }
+                    Action::Refresh => {
+                        should_refresh = true;
+                        continue;
+                    }
                     _ => {}
                 }
 
                 self.handle_action(action)?
+            }
+
+            // Handle grouped actions
+            if let Some((w, h)) = latest_resize {
+                self.handle_action(Action::Resize(w, h))?;
+            }
+            if should_refresh {
+                self.handle_action(Action::Refresh)?;
             }
         }
 
