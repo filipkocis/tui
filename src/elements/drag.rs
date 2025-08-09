@@ -5,7 +5,7 @@ use crate::{Action, Context, IntoEventHandler, Node};
 #[derive(Debug, Clone)]
 /// Synthetic event for left-click mouse drag events.
 pub struct MouseDragEvent {
-    /// Delta from between `drag startc` and `drag end` positions.
+    /// Delta from between `drag start` and `drag end` positions.
     pub delta: (i16, i16),
     /// Drag start position relative to the node.
     pub relative: (u16, u16),
@@ -36,6 +36,11 @@ pub fn on_drag_handler(
             return false;
         };
 
+        // Is grabbed by this node
+        if hold.2 != node.id() {
+            return false;
+        }
+
         // Is mouse event
         let Some(mouse_event) = ctx.event.as_mouse_event() else {
             return false;
@@ -48,24 +53,24 @@ pub fn on_drag_handler(
         };
 
         let start = (hold.0 as i16, hold.1 as i16);
-        let end = (mouse_event.column as i16, mouse_event.row as i16);
-        let delta = (end.0 - start.0, end.1 - start.1);
+        let end = (mouse_event.column, mouse_event.row);
+        let delta = (end.0 as i16 - start.0, end.1 as i16 - start.1);
 
         let drag_event = MouseDragEvent {
             delta,
             relative: node.relative_position(start.0, start.1),
-            absolute: (end.0 as u16, end.1 as u16),
+            absolute: (end.0, end.1),
             modifiers: mouse_event.modifiers,
         };
 
         let result = on_drag(ctx, drag_event, node);
 
         if result.update_hold_x {
-            hold.0 = end.0 as u16;
+            hold.0 = end.0;
         }
 
         if result.update_hold_y {
-            hold.1 = end.1 as u16;
+            hold.1 = end.1;
         }
 
         ctx.app.hold = Some(hold);
