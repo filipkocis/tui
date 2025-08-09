@@ -212,7 +212,7 @@ impl App {
             let mut latest_resize = None;
             let mut should_refresh = false;
 
-            for action in self.context.actions.drain().into_iter() {
+            for action in self.context.actions.drain() {
                 match &action {
                     Action::RecomputeNode(weak) => {
                         if recomputed.iter().any(|r| r.is_equal(weak)) {
