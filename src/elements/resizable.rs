@@ -19,7 +19,6 @@ impl Resizable {
     pub fn apply(node: &mut Node, allow_x_resize: bool, allow_y_resize: bool) {
         let on_drag = move |ctx: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
-
             if !allow_x_resize && !allow_y_resize {
                 return result;
             }
@@ -35,26 +34,18 @@ impl Resizable {
                 return result;
             }
 
-            // Dont resize if dragging is happening at < than the node's offset,
-            // relative is clamped to 0 and may cause false positives
-            if drag_event.absolute.0 < node.style.offset.x().max(0) as u16
-                || drag_event.absolute.1 < node.style.offset.y().max(0) as u16
-            {
-                return result;
-            }
-
-            if drag_x && allow_x_resize {
-                let content_width = node.style.size.width.computed_size();
-                let new_width = (content_width as i16 + drag_event.delta.0).max(0) as u16;
-                node.style.size.width = SizeValue::cells(new_width);
+            let content_width = node.style.size.width.computed_size();
+            let new_width = content_width as i16 + drag_event.delta.0;
+            if drag_x && allow_x_resize && new_width >= 0 {
+                node.style.size.width = SizeValue::cells(new_width as u16);
                 result.update_hold_x = true;
                 result.stop_propagation = true;
             }
 
-            if drag_y && allow_y_resize {
-                let content_height = node.style.size.height.computed_size();
-                let new_height = (content_height as i16 + drag_event.delta.1).max(0) as u16;
-                node.style.size.height = SizeValue::cells(new_height);
+            let content_height = node.style.size.height.computed_size();
+            let new_height = content_height as i16 + drag_event.delta.1;
+            if drag_y && allow_y_resize && new_height >= 0 {
+                node.style.size.height = SizeValue::cells(new_height as u16);
                 result.update_hold_y = true;
                 result.stop_propagation = true;
             }
