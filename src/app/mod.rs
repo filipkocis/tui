@@ -332,8 +332,8 @@ impl App {
             MouseEventKind::Down(_) => self.context.hold = Some((column, row, target_id)),
             MouseEventKind::Up(_) => self.context.hold = None,
             MouseEventKind::Drag(_) => {
-                if let Some((_, _, old_target_id)) = self.context.hold {
-                    target_id = old_target_id;
+                if let Some((_, _, hold_target_id)) = self.context.hold {
+                    target_id = hold_target_id;
                 }
             }
             _ => {}
