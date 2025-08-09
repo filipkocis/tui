@@ -116,12 +116,12 @@ impl Draggable {
 
             let (x, y) = drag_event.relative;
             if let Some(area) = area_x {
-                if x < area.0 || x > area.1 {
+                if x < area.0 || x >= area.1 {
                     return result;
                 }
             }
             if let Some(area) = area_y {
-                if y < area.0 || y > area.1 {
+                if y < area.0 || y >= area.1 {
                     return result;
                 }
             }
