@@ -37,7 +37,10 @@ pub struct App {
     viewport: Viewport,
 
     pub(crate) context: AppContext,
-    should_draw: bool,
+    /// If set, the application will draw `viewport` of the canvas to the terminal at the end of
+    /// the main loop. It's used to optimize drawing and uses the `viewport` of the last `render`
+    /// method call.
+    next_draw_with: Option<Viewport>,
     should_quit: bool,
 }
 
@@ -97,7 +100,7 @@ impl App {
             viewport: Viewport::new(width, height),
 
             context,
-            should_draw: false,
+            next_draw_with: None,
             should_quit: false,
         }
     }
@@ -123,27 +126,45 @@ impl App {
         Ok(())
     }
 
-    /// Renders the application to the canvas and hitmap with the given viewport.
+    /// Renders the application to the `canvas` and `hitmap` with the given viewport.
+    /// Prepares the application for the next draw call by setting the `next_draw_with` viewport.
+    /// # Note
     /// This method should be called after the layout has been computed.
-    /// Prepares the application for drawing.
     pub fn render(&mut self, viewport: Viewport) {
         self.root
             .borrow()
             .render_to(viewport, &mut self.canvas, &mut self.hitmap);
         self.canvas.prune_redundant_codes();
 
-        // TODO: add minimal viewport mechanism to drawing
-        self.should_draw = true;
+        self.next_draw_with(viewport);
     }
 
-    /// Draws the application to the terminal if `self.should_draw` is true.
-    pub fn draw(&mut self) -> io::Result<()> {
-        if !self.should_draw {
-            return Ok(());
-        }
-        self.should_draw = false;
+    /// Sets the next draw viewport to the union of the current viewport and the new one.
+    /// # Note
+    /// If in a single loop, we update both top-left and bottom-right corners of the application,
+    /// this method will combine their viewports and draw the whole area in the next draw call.
+    pub fn next_draw_with(&mut self, new_viewport: Viewport) {
+        let mut viewport = self.next_draw_with.take().unwrap_or(new_viewport);
 
-        self.canvas.render()?;
+        // Combine into an union of the current and new viewport
+        viewport.min.0 = viewport.min.0.min(new_viewport.min.0);
+        viewport.min.1 = viewport.min.1.min(new_viewport.min.1);
+        viewport.max.0 = viewport.max.0.max(new_viewport.max.0);
+        viewport.max.1 = viewport.max.1.max(new_viewport.max.1);
+
+        self.next_draw_with = Some(viewport);
+    }
+
+    /// Draws the application to the terminal if `self.next_draw_with` is set.
+    /// # Note
+    /// This method should be called at the end of the main loop after rendering the application,
+    /// as it only draws the canvas to the terminal.
+    pub fn draw(&mut self) -> io::Result<()> {
+        let Some(viewport) = self.next_draw_with.take() else {
+            return Ok(());
+        };
+
+        self.canvas.render(viewport)?;
         // self.hitmap.debug_render();
         self.move_cursor_to_focus()?;
 

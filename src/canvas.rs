@@ -1,12 +1,12 @@
 use std::io::{self, Write, stdout};
 
 use crossterm::{
-    QueueableCommand, cursor,
+    QueueableCommand, cursor, queue,
     style::{self, Color},
 };
 
 use crate::{
-    Code, Line, Padding, Size, Style, Viewport,
+    Code, Line, Size, Style, Viewport,
     text::{StyledUnit, Text},
 };
 
@@ -281,20 +281,34 @@ impl Canvas {
     ///
     /// # Note
     /// It should be called on the root canvas only, children should use [`child.render_to(screen, root)`](Self::render_to)
-    pub fn render(&self) -> io::Result<()> {
+    pub fn render(&self, viewport: Viewport) -> io::Result<()> {
         let mut stdout = stdout();
-        stdout.queue(cursor::Hide)?;
+        queue!(stdout, cursor::SavePosition, cursor::Hide)?;
 
         for (i, line) in self.buffer.iter().enumerate() {
             let y = self.position.1 + i as i16;
-            if y < 0 {
-                continue;
+            if y < viewport.min.1 as i16 {
+                continue; // We are above the viewport
+            } else if y >= viewport.max.1 as i16 {
+                break; // We are below the viewport
             }
 
-            let x = self.position.0 as u16;
+            let x = self.position.0.max(viewport.min.0 as i16) as u16;
             stdout.queue(cursor::MoveTo(x, y as u16))?;
 
+            let mut position = 0;
             for unit in &line.content {
+                let width = unit.width();
+
+                // We don't skip ANY codes (width 0), they need to be rendered
+                if width > 0 {
+                    if position < viewport.min.0 as usize || position >= viewport.max.0 as usize {
+                        position += width;
+                        continue; // We are before or beyond the viewport width
+                    }
+                    position += width; // Maybe this shoul be before the check?
+                }
+
                 match unit {
                     StyledUnit::Grapheme(g) => {
                         stdout.queue(style::Print(&g.str))?;
@@ -306,7 +320,7 @@ impl Canvas {
             }
         }
 
-        stdout.queue(cursor::Show)?;
+        queue!(stdout, cursor::RestorePosition, cursor::Show)?;
         stdout.flush()
     }
 
