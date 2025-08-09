@@ -1,4 +1,4 @@
-use crate::{Size, Style};
+use crate::Style;
 
 /// Justify content in the direction of the flex container
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

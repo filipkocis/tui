@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell,
+    cell::{Ref, RefCell, RefMut},
     rc::{Rc, Weak},
 };
 
@@ -65,13 +65,13 @@ impl NodeHandle {
 
     /// Immutably borrows the node
     #[inline]
-    pub fn borrow(&self) -> std::cell::Ref<Node> {
+    pub fn borrow(&self) -> Ref<'_, Node> {
         self.inner().borrow()
     }
 
     /// Mutably borrows the node
     #[inline]
-    pub fn borrow_mut(&self) -> std::cell::RefMut<Node> {
+    pub fn borrow_mut(&self) -> RefMut<'_, Node> {
         self.inner().borrow_mut()
     }
 

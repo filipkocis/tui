@@ -32,13 +32,13 @@ impl BufferLine {
 
     /// Returns graphemes via `unicode-segmentation` crate
     #[inline]
-    pub fn graphemes(&self) -> Graphemes {
+    pub fn graphemes(&self) -> Graphemes<'_> {
         self.content.graphemes(true)
     }
 
     /// Returns grapheme indices via `unicode_segmentation` crate
     #[inline]
-    pub fn grapheme_indices(&self) -> GraphemeIndices {
+    pub fn grapheme_indices(&self) -> GraphemeIndices<'_> {
         self.content.grapheme_indices(true)
     }
 

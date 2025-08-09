@@ -136,13 +136,13 @@ impl Node {
 
     /// Get a reference to the node's [`cache`](NodeCache).
     #[inline]
-    pub fn cache(&self) -> Ref<NodeCache> {
+    pub fn cache(&self) -> Ref<'_, NodeCache> {
         self.cache.borrow()
     }
 
     /// Get a mutable reference to the node's [`cache`](NodeCache).
     #[inline]
-    pub(crate) fn cache_mut(&self) -> RefMut<NodeCache> {
+    pub(crate) fn cache_mut(&self) -> RefMut<'_, NodeCache> {
         self.cache.borrow_mut()
     }
 
