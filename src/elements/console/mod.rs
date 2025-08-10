@@ -82,7 +82,7 @@ impl Console {
     /// handler will be created
     pub fn register_toggle(console: WeakNodeHandle, node: &mut Node, toggle: KeyCode) {
         let mut last_size = Size::default();
-        let mut last_border = (false, false, false, false, None);
+        let mut last_border = Border::none();
         let mut opened = true;
 
         let on_press = move |c: &mut Context, _: &mut Node| -> bool {
@@ -97,14 +97,14 @@ impl Console {
                 if key_event.code == toggle {
                     if opened {
                         last_size = node.style.size;
-                        last_border = node.style.border;
+                        last_border = node.style.border.clone();
 
                         node.style.size = Size::from_cells(0, 0);
-                        node.style.border = (false, false, false, false, None);
+                        node.style.border = Border::none();
                         c.app.emmit(Action::FocusNode(c.self_weak.clone()));
                     } else {
                         node.style.size = last_size;
-                        node.style.border = last_border;
+                        node.style.border = last_border.clone();
 
                         if let Some(console_input) = node.children.get(2) {
                             c.app.emmit(Action::FocusNode(console_input.weak()));
@@ -130,7 +130,7 @@ impl Console {
 
         let mut root = Node::default();
 
-        root.style.border = (true, true, true, true, None);
+        root.style.border = Border::all();
         root.style.offset = Offset::Absolute(0, 0);
         root.style.size = Size::from_cells(WIDTH, HEIGHT);
         root.style.bg = Some(Hsl::new(0.0, 0.0, 0.2).into());

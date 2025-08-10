@@ -32,7 +32,7 @@ pub struct Style {
     pub crossed: bool,
 
     pub padding: Padding,
-    pub border: (bool, bool, bool, bool, Option<Color>),
+    pub border: Border,
 
     pub justify: Justify,
     pub align: Align,
@@ -160,17 +160,13 @@ impl Style {
     pub fn extra_width(&self) -> u16 {
         self.padding
             .horizontal()
-            .saturating_add(self.border.2 as u16)
-            .saturating_add(self.border.3 as u16)
+            .saturating_add(self.border.width())
     }
 
     /// Returns the extra height (vertical padding and borders)
     #[inline]
     pub fn extra_height(&self) -> u16 {
-        self.padding
-            .vertical()
-            .saturating_add(self.border.0 as u16)
-            .saturating_add(self.border.1 as u16)
+        self.padding.vertical().saturating_add(self.border.height())
     }
 
     /// Total computed width

@@ -1,6 +1,8 @@
 use crossterm::{event::KeyModifiers, style::Color};
 
-use crate::{Node, Offset, Padding, PartialRect, Size, SizeValue, node::NodeHandle, text::Text};
+use crate::{
+    Border, Node, Offset, Padding, PartialRect, Size, SizeValue, node::NodeHandle, text::Text,
+};
 
 use super::{Button, Draggable, button::MouseClickHandler};
 
@@ -49,17 +51,11 @@ impl Dialog {
         container.style.size = Size::new(SizeValue::cells(30), SizeValue::auto());
         container.style.gap = (1, 1);
         container.style.padding = Padding::new(1, 2);
-        container.style.border = (
-            true,
-            true,
-            true,
-            true,
-            Some(Color::Rgb {
-                r: 138,
-                g: 43,
-                b: 226,
-            }),
-        );
+        container.style.border = Border::all().with_color(Some(Color::Rgb {
+            r: 138,
+            g: 43,
+            b: 226,
+        }));
 
         container.into_handle()
     }

@@ -1,7 +1,7 @@
 use crossterm::style::Color;
 
 use crate::{
-    Code, Context, Node, NodeHandle, Offset, Padding, Size, SizeValue,
+    Border, Code, Context, Node, NodeHandle, Offset, Padding, Size, SizeValue,
     text::{StyleSpan, Text},
 };
 
@@ -74,7 +74,9 @@ impl Tabs {
 
         tabs.style.size = Size::new(SizeValue::percent(100), SizeValue::cells(2));
         tabs.style.flex_row = true;
-        tabs.style.border = (false, true, false, false, Some(Self::COLOR));
+        tabs.style.border = Border::none()
+            .with_bottom(true)
+            .with_color(Some(Self::COLOR));
         let tabs = tabs.into_handle();
 
         for (i, (label, value)) in values.into_iter().enumerate() {
@@ -97,7 +99,9 @@ impl Tabs {
 
             let mut button = Button::new(&label_clone, Some(on_click));
             button.style.padding = Padding::new(0, 1);
-            button.style.border = (true, false, true, true, Some(Self::COLOR));
+            button.style.border = Border::all()
+                .with_bottom(false)
+                .with_color(Some(Self::COLOR));
 
             tabs.add_child_node(button);
         }

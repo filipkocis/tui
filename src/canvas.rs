@@ -147,34 +147,34 @@ impl Canvas {
 
     /// Add border
     pub fn add_border(&mut self, style: &Style) {
-        let (has_top, has_bottom, has_left, has_right, border_color) = style.border;
+        let border = &style.border;
 
         let fg_reset_code = StyledUnit::Code(Code::Foreground(Color::Reset));
 
-        let style_top = StyledUnit::grapheme("─");
-        let style_bottom = StyledUnit::grapheme("─");
-        let style_left = StyledUnit::grapheme("│");
-        let style_right = StyledUnit::grapheme("│");
+        let style_top = StyledUnit::grapheme(&border.style.top);
+        let style_bottom = StyledUnit::grapheme(&border.style.bottom);
+        let style_left = StyledUnit::grapheme(&border.style.left);
+        let style_right = StyledUnit::grapheme(&border.style.right);
 
-        let top_left = StyledUnit::grapheme("╭");
-        let top_right = StyledUnit::grapheme("╮");
-        let bottom_left = StyledUnit::grapheme("╰");
-        let bottom_right = StyledUnit::grapheme("╯");
+        let top_left = StyledUnit::grapheme(&border.style.top_left);
+        let top_right = StyledUnit::grapheme(&border.style.top_right);
+        let bottom_left = StyledUnit::grapheme(&border.style.bottom_left);
+        let bottom_right = StyledUnit::grapheme(&border.style.bottom_right);
 
         let chars_width = style.clamped_width() as usize + style.padding.horizontal() as usize;
 
-        if has_top {
+        if border.top {
             let mut content = vec![style_top; chars_width];
-            if let Some(color) = border_color {
+            if let Some(color) = border.color {
                 content.insert(0, StyledUnit::Code(Code::Foreground(color)));
                 content.push(fg_reset_code.clone());
             }
             self.buffer.insert(0, Line { content });
         }
 
-        if has_bottom {
+        if border.bottom {
             let mut content = vec![style_bottom; chars_width];
-            if let Some(color) = border_color {
+            if let Some(color) = border.color {
                 content.insert(0, StyledUnit::Code(Code::Foreground(color)));
                 content.push(fg_reset_code.clone());
             }
@@ -182,15 +182,15 @@ impl Canvas {
         }
 
         let lines = self.buffer.len();
-        if has_left {
-            let first_char_index = border_color.is_some() as usize; // 0 has color code
+        if border.left {
+            let first_char_index = border.color.is_some() as usize; // 0 has color code
             for (i, line) in self.buffer.iter_mut().enumerate() {
-                if i == 0 && has_top {
+                if i == 0 && border.top {
                     line.content.insert(first_char_index, top_left.clone());
-                } else if i == lines - 1 && has_bottom {
+                } else if i == lines - 1 && border.bottom {
                     line.content.insert(first_char_index, bottom_left.clone());
                 } else {
-                    if let Some(color) = border_color {
+                    if let Some(color) = border.color {
                         line.content.insert(0, fg_reset_code.clone());
                         line.content.insert(0, style_left.clone());
                         line.content
@@ -202,22 +202,22 @@ impl Canvas {
             }
         }
 
-        if has_right {
+        if border.right {
             let real_len_first = self.buffer.first().map(|l| l.content.len()).unwrap_or(0);
             let real_len_last = self.buffer.last().map(|l| l.content.len()).unwrap_or(0);
 
-            let last_char_index_first = real_len_first - border_color.is_some() as usize; // real_len is reset code
-            let last_char_index_last = real_len_last - border_color.is_some() as usize; // real_len is reset code
+            let last_char_index_first = real_len_first - border.color.is_some() as usize; // real_len is reset code
+            let last_char_index_last = real_len_last - border.color.is_some() as usize; // real_len is reset code
 
             for (i, line) in self.buffer.iter_mut().enumerate() {
-                if i == 0 && has_top {
+                if i == 0 && border.top {
                     line.content
                         .insert(last_char_index_first, top_right.clone());
-                } else if i == lines - 1 && has_bottom {
+                } else if i == lines - 1 && border.bottom {
                     line.content
                         .insert(last_char_index_last, bottom_right.clone());
                 } else {
-                    if let Some(color) = border_color {
+                    if let Some(color) = border.color {
                         line.content.push(StyledUnit::Code(Code::Foreground(color)));
                         line.content.push(style_right.clone());
                         line.content.push(fg_reset_code.clone());

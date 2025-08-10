@@ -164,8 +164,8 @@ impl Node {
     #[inline]
     pub fn focus_cursor_position(&self) -> (u16, u16) {
         let (px, py) = self.canvas.position;
-        let xw = self.style.border.2 as u16 + self.style.padding.left;
-        let xh = self.style.border.0 as u16 + self.style.padding.top;
+        let xw = self.style.border.left() + self.style.padding.left;
+        let xh = self.style.border.top() + self.style.padding.top;
 
         // Base cursor position
         let x = px as i32 + xw as i32;
@@ -407,8 +407,8 @@ impl Node {
 
         let offset_position = parent_position.add(self.style.offset);
         let content_position = offset_position.add_tuple((
-            self.style.padding.left as i16 + self.style.border.2 as i16,
-            self.style.padding.top as i16 + self.style.border.0 as i16,
+            self.style.padding.left as i16 + self.style.border.left() as i16,
+            self.style.padding.top as i16 + self.style.border.top() as i16,
         ));
 
         let mut canvas = Canvas {
@@ -598,15 +598,15 @@ impl Node {
         );
 
         viewport.max.0 = viewport.max.0.saturating_sub(
-            (self.style.padding.right + self.style.border.3 as u16).saturating_sub(overflow.0),
+            (self.style.padding.right + self.style.border.right()).saturating_sub(overflow.0),
         );
         viewport.max.1 = viewport.max.1.saturating_sub(
-            (self.style.padding.bottom + self.style.border.1 as u16).saturating_sub(overflow.1),
+            (self.style.padding.bottom + self.style.border.bottom()).saturating_sub(overflow.1),
         );
 
         let viewport_offset = (
-            self.style.padding.left + self.style.border.2 as u16,
-            self.style.padding.top + self.style.border.0 as u16,
+            self.style.padding.left + self.style.border.left(),
+            self.style.padding.top + self.style.border.top(),
         );
 
         viewport.min.0 += viewport_offset.0.saturating_sub(viewport_underflow.0);
