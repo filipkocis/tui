@@ -128,15 +128,23 @@ impl Console {
         const WIDTH: u16 = 60;
         const HEIGHT: u16 = 40;
 
-        let mut root = Draggable::new(None, Some((0, 1)), KeyModifiers::NONE);
-        let root_id = root.id();
+        let mut root = Node::default();
+
         root.style.border = (true, true, true, true, None);
         root.style.offset = Offset::Absolute(0, 0);
         root.style.size = Size::from_cells(WIDTH, HEIGHT);
         root.style.bg = Some(Hsl::new(0.0, 0.0, 0.2).into());
+        let root_id = root.id();
+        let root = root.into_handle();
 
         // Window bar
         let mut window_bar = Node::default();
+        Draggable::apply(
+            &mut window_bar,
+            PartialRect::from_max_y(1),
+            KeyModifiers::NONE,
+            Some(root.weak()),
+        );
         window_bar.style.size = Size::parse("100%", "1").unwrap();
         window_bar.style.bg = Some(Hsl::new(0.0, 0.0, 0.3).into());
         window_bar.style.gap = (1, 0);
@@ -205,7 +213,6 @@ impl Console {
         input.style.bg = Some(Hsl::new(0.0, 0.0, 0.3).into());
 
         // Combine window
-        let root = root.into_handle();
         root.add_child(window_bar);
         root.add_child_node(history);
         root.add_child_node(input);
