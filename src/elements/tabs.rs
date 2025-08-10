@@ -2,6 +2,7 @@ use crossterm::style::Color;
 
 use crate::{
     Border, Code, Context, Node, NodeHandle, Offset, Padding, Size, SizeValue,
+    border::BorderStyle,
     text::{StyleSpan, Text},
 };
 
@@ -19,30 +20,27 @@ impl Tabs {
     pub fn new<V: 'static>(
         values: Vec<(String, V)>,
         default: usize,
-        on_select: impl FnMut(&str, &V) + Clone + 'static,
+        on_select: impl FnMut(&Context, &str, &V) + Clone + 'static,
     ) -> NodeHandle {
         let values_lengths = values
             .iter()
             .enumerate()
             .map(|(i, (label, _))| (i, label.len()))
             .collect::<Vec<_>>();
-        let build_line_text = move |default: usize| -> (Text, u16) {
-            // TODO: use Border options struct when implemented
-            let to_right = '╰';
-            let to_left = '╯';
+        let build_line_text = move |default: usize, style: &BorderStyle| -> (Text, u16) {
+            // TODO: add connectors to border style
             let connector = '┴';
-            let straight = "─";
 
             let mut line = String::new();
 
             for (i, label_len) in &values_lengths {
                 if *i == default {
-                    line.push(to_left);
+                    line.push_str(&style.bottom_right);
                     line.push_str(&" ".repeat(label_len + 2));
-                    line.push(to_right);
+                    line.push_str(&style.bottom_left);
                 } else {
                     line.push(connector);
-                    line.push_str(&straight.repeat(label_len + 2));
+                    line.push_str(&style.bottom.repeat(label_len + 2));
                     line.push(connector);
                 }
             }
@@ -65,7 +63,7 @@ impl Tabs {
         let mut bottom_line = Node::default();
         let mut tabs = Node::default();
 
-        let (text, size) = build_line_text(default);
+        let (text, size) = build_line_text(default, bottom_line.style.border.style);
         bottom_line.text = text;
         bottom_line.style.offset = Offset::Translate(0, -1);
         bottom_line.style.size = Size::new(SizeValue::cells(size), SizeValue::cells(1));
@@ -86,14 +84,14 @@ impl Tabs {
             let bottom_line_weak = bottom_line_weak.clone();
             let build_line_text = build_line_text.clone();
 
-            let on_click = Box::new(move |_: &mut Context, _, _: &mut _| {
+            let on_click = Box::new(move |ctx: &mut Context, _, _: &mut _| {
                 if let Some(line) = bottom_line_weak.upgrade() {
                     let mut line = line.borrow_mut();
-                    let (text, size) = build_line_text(i);
+                    let (text, size) = build_line_text(i, line.style.border.style);
                     line.text = text;
                     line.style.size.width = SizeValue::cells(size);
                 }
-                on_select(&label, &value);
+                on_select(ctx, &label, &value);
                 true
             });
 
