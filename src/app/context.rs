@@ -6,16 +6,20 @@ pub struct AppContext {
     /// Current hold position with it's target, from a mouse_down event.
     /// During drag, this field does not get changed automatically.
     pub hold: Option<(u16, u16, NodeId)>,
+
     /// Current node with focus. Set on mouse down event, before the event is dispatched.
     /// Should be changed manually to implement more complex focus logic.    
     /// Initially set to the root node.
     pub(crate) focus: Option<(NodeId, WeakNodeHandle)>,
+    /// Current node under the mouse cursor. Set on mouse move event, before the event is
+    /// dispatched.
+    pub(crate) hover: Option<(NodeId, WeakNodeHandle)>,
 
-    /// TODO: this one has no use yet
-    pub hover: Option<WeakNodeHandle>,
-
-    /// Screen size
-    pub screen_size: (u16, u16),
+    /// Current screen size
+    pub(crate) screen_size: (u16, u16),
+    /// Current mouse position (in screen coords). It will be `None` if the app never
+    /// received a mouse event.
+    pub(crate) mouse_pos: Option<(u16, u16)>,
 
     /// Actions queue for the application. Executed in the main loop.
     pub actions: Actions,
@@ -30,6 +34,7 @@ impl AppContext {
             focus: Some((root.borrow().id(), root.weak())),
             hover: None,
             screen_size,
+            mouse_pos: None,
             actions: Actions::new(),
         }
     }
@@ -40,10 +45,28 @@ impl AppContext {
         self.actions.emmit(action);
     }
 
-    /// The current focus node.
+    /// Currently focused node.
     #[inline]
     pub fn focus(&self) -> &Option<(NodeId, WeakNodeHandle)> {
         &self.focus
+    }
+
+    /// Current node under the mouse cursor.
+    #[inline]
+    pub fn hover(&self) -> &Option<(NodeId, WeakNodeHandle)> {
+        &self.hover
+    }
+
+    /// Current screen size.
+    #[inline]
+    pub fn screen_size(&self) -> (u16, u16) {
+        self.screen_size
+    }
+
+    /// Current mouse positoin (in screen coords).
+    #[inline]
+    pub fn mouse_pos(&self) -> Option<(u16, u16)> {
+        self.mouse_pos
     }
 }
 

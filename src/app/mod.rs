@@ -321,6 +321,7 @@ impl App {
     /// Dispatches a mouse event to the target node based on the hitmap.
     pub fn dispatch_mouse_event(&mut self, mouse_event: MouseEvent) {
         let (column, row) = (mouse_event.column, mouse_event.row);
+        self.context.mouse_pos = Some((column, row));
 
         let Some(mut target_id) = self.hitmap.get(column, row) else {
             return;
