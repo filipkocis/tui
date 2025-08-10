@@ -342,8 +342,49 @@ impl App {
         self.dispatch_event(Event::Mouse(mouse_event), target_id);
     }
 
-    /// Dispatches a `focus lost` and `focus gained` event to the relevant nodes. Parents with
-    /// `focus within` will receive an event only if the resulting change affects them.
+    /// Dispatches `lost` and `gained` events to the relevant nodes. Parents with
+    /// `state within` will receive an event only if the resulting change affects them.
+    pub fn dispatch_lost_gained_events(
+        &mut self,
+        new_id: NodeId,
+        old_id: Option<NodeId>,
+        lost: Event,
+        gained: Event,
+    ) {
+        let Some(old_id) = old_id else {
+            // If there is no old state, dispatch only the gained event
+            self.dispatch_event(gained, new_id);
+            return;
+        };
+
+        let Some(old_path) = self.get_path_from(old_id) else {
+            return;
+        };
+        let Some(new_path) = self.get_path_from(new_id) else {
+            return;
+        };
+
+        // Get the deepest common parent index of the old and new paths
+        let mut deepest_common_parent_index = 0;
+        for (old, new) in old_path.iter().rev().zip(new_path.iter().rev()) {
+            if Rc::ptr_eq(&old.0, &new.0) {
+                deepest_common_parent_index += 1;
+            } else {
+                break;
+            }
+        }
+
+        // Dispatch lost events to the differing parents
+        let old_path = &old_path[..old_path.len() - deepest_common_parent_index];
+        self.execute_event_phases(lost, old_path);
+
+        // Dispatch gained events to the differing parents
+        let new_path = &new_path[..new_path.len() - deepest_common_parent_index];
+        self.execute_event_phases(gained, new_path);
+    }
+
+    /// Dispatches `focus lost` and `focus gained` events to relevant nodes where the focus has
+    /// changed.
     pub fn dispatch_node_focus_event(
         &mut self,
         new_focus_id: NodeId,
@@ -351,36 +392,25 @@ impl App {
     ) {
         let old_focus = self.context.focus.replace((new_focus_id, new_focus_weak));
 
-        let Some((old_focus_id, _)) = old_focus else {
-            // If there is no old focus, dispatch only the focus gained event
-            self.dispatch_event(Event::NodeFocusGained, new_focus_id);
-            return;
-        };
+        self.dispatch_lost_gained_events(
+            new_focus_id,
+            old_focus.as_ref().map(|(id, _)| *id),
+            Event::NodeFocusLost,
+            Event::NodeFocusGained,
+        )
+    }
 
-        let Some(old_path) = self.get_path_from(old_focus_id) else {
-            return;
-        };
-        let Some(new_path) = self.get_path_from(new_focus_id) else {
-            return;
-        };
+    /// Dispatches `hover lost` and `hover gained` events to relevant nodes where the hover has
+    /// changed.
+    pub fn dispatch_hover_event(&mut self, new_hover_id: NodeId, new_hover_weak: WeakNodeHandle) {
+        let old_hover = self.context.hover.replace((new_hover_id, new_hover_weak));
 
-        // Get the last common parent index of the old and new focus paths
-        let mut last_common_parent_index = 0;
-        for (old, new) in old_path.iter().rev().zip(new_path.iter().rev()) {
-            if Rc::ptr_eq(&old.0, &new.0) {
-                last_common_parent_index += 1;
-            } else {
-                break;
-            }
-        }
-
-        // Dispatch focus lost events to the differing parents
-        let old_path = &old_path[..old_path.len() - last_common_parent_index];
-        self.execute_event_phases(Event::NodeFocusLost, old_path);
-
-        // Dispatch focus gained events to the differing parents
-        let new_path = &new_path[..new_path.len() - last_common_parent_index];
-        self.execute_event_phases(Event::NodeFocusGained, new_path);
+        self.dispatch_lost_gained_events(
+            new_hover_id,
+            old_hover.as_ref().map(|(id, _)| *id),
+            Event::HoverLost,
+            Event::HoverGained,
+        )
     }
 
     /// Dispatches an event to the target node in capture, target and bubble phases
@@ -397,6 +427,13 @@ impl App {
         if let Some(mouse_event) = event.as_mouse_event() {
             if mouse_event.kind.is_down() {
                 self.dispatch_node_focus_event(target_id, target_weak.clone());
+            }
+        }
+
+        // Set hover to target node on mouse move
+        if let Some(mouse_event) = event.as_mouse_event() {
+            if mouse_event.kind.is_moved() {
+                self.dispatch_hover_event(target_id, target_weak.clone());
             }
         }
 

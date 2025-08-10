@@ -13,6 +13,10 @@ pub enum Event {
     NodeFocusLost,
     /// A node gained focus
     NodeFocusGained,
+    /// A node gained hover state
+    HoverGained,
+    /// A node lost hover state
+    HoverLost,
     /// A single key event with additional pressed modifiers.
     Key(KeyEvent),
     /// A single mouse event with additional pressed modifiers.
