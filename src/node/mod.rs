@@ -633,9 +633,8 @@ impl Node {
             .add_handler(handler, is_capturing);
     }
 
-    /// Builds a `path` from target to root node, returning true if the target was found.
-    /// TODO: remove this, this is a temporary solution
-    pub fn build_path_to_node(
+    /// Builds a `path` from target to `self` node, returning true if the target was found.
+    pub fn build_path_from_node(
         &self,
         id: NodeId,
         path: &mut Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>,
@@ -645,7 +644,7 @@ impl Node {
         }
 
         for child in &self.children {
-            if child.borrow().build_path_to_node(id, path) {
+            if child.borrow().build_path_from_node(id, path) {
                 path.push((child.inner().clone(), child.weak()));
                 return true;
             }

@@ -289,11 +289,10 @@ impl App {
     }
 
     /// Returns the path from the target node `id` to the root node.
-    /// TODO: temporary solution, remove in the future
-    pub fn get_path_to(&self, id: NodeId) -> Option<Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>> {
+    pub fn get_path_from(&self, id: NodeId) -> Option<Vec<(Rc<RefCell<Node>>, WeakNodeHandle)>> {
         let mut path = Vec::new();
 
-        if self.root.borrow().build_path_to_node(id, &mut path) {
+        if self.root.borrow().build_path_from_node(id, &mut path) {
             path.push((self.root.inner().clone(), self.root.weak()));
             Some(path)
         } else {
@@ -357,10 +356,10 @@ impl App {
             return;
         };
 
-        let Some(old_path) = self.get_path_to(old_focus_id) else {
+        let Some(old_path) = self.get_path_from(old_focus_id) else {
             return;
         };
-        let Some(new_path) = self.get_path_to(new_focus_id) else {
+        let Some(new_path) = self.get_path_from(new_focus_id) else {
             return;
         };
 
@@ -385,7 +384,7 @@ impl App {
 
     /// Dispatches an event to the target node in capture, target and bubble phases
     pub fn dispatch_event(&mut self, event: Event, target_id: NodeId) {
-        let Some(path) = self.get_path_to(target_id) else {
+        let Some(path) = self.get_path_from(target_id) else {
             return;
         };
 
