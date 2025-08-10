@@ -17,15 +17,15 @@ pub fn set_default_border(border: BorderStyle) -> Result<(), BorderStyle> {
 /// Border style for nodes
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BorderStyle {
-    pub top: char,
-    pub right: char,
-    pub bottom: char,
-    pub left: char,
+    pub top: String,
+    pub right: String,
+    pub bottom: String,
+    pub left: String,
 
-    pub top_left: char,
-    pub top_right: char,
-    pub bottom_left: char,
-    pub bottom_right: char,
+    pub top_left: String,
+    pub top_right: String,
+    pub bottom_left: String,
+    pub bottom_right: String,
 }
 
 impl Default for BorderStyle {
@@ -35,25 +35,25 @@ impl Default for BorderStyle {
 }
 
 impl BorderStyle {
-    pub fn new(
-        top: char,
-        right: char,
-        bottom: char,
-        left: char,
-        top_left: char,
-        top_right: char,
-        bottom_left: char,
-        bottom_right: char,
+    pub fn new<S: Into<String>>(
+        top: S,
+        right: S,
+        bottom: S,
+        left: S,
+        top_left: S,
+        top_right: S,
+        bottom_left: S,
+        bottom_right: S,
     ) -> Self {
         Self {
-            top,
-            right,
-            bottom,
-            left,
-            top_left,
-            top_right,
-            bottom_left,
-            bottom_right,
+            top: top.into(),
+            right: right.into(),
+            bottom: bottom.into(),
+            left: left.into(),
+            top_left: top_left.into(),
+            top_right: top_right.into(),
+            bottom_left: bottom_left.into(),
+            bottom_right: bottom_right.into(),
         }
     }
 
@@ -86,7 +86,7 @@ pub struct Border {
 
 impl Default for Border {
     fn default() -> Self {
-        Self::from_sides(false, false, false, false)
+        Self::none()
     }
 }
 
@@ -141,6 +141,38 @@ impl Border {
         Self::from_sides(false, true, false, true)
     }
 
+    /// Sets the top side of the border
+    #[inline]
+    #[must_use]
+    pub fn with_top(mut self, top: bool) -> Self {
+        self.top = top;
+        self
+    }
+
+    /// Sets the bottom side of the border
+    #[inline]
+    #[must_use]
+    pub fn with_bottom(mut self, bottom: bool) -> Self {
+        self.bottom = bottom;
+        self
+    }
+
+    /// Sets the left side of the border
+    #[inline]
+    #[must_use]
+    pub fn with_left(mut self, left: bool) -> Self {
+        self.left = left;
+        self
+    }
+
+    /// Sets the right side of the border
+    #[inline]
+    #[must_use]
+    pub fn with_right(mut self, right: bool) -> Self {
+        self.right = right;
+        self
+    }
+
     /// Sets the color of the border
     #[inline]
     #[must_use]
@@ -158,12 +190,38 @@ impl Border {
     }
 
     /// Returns the width of the border
+    #[inline]
     pub fn width(&self) -> u16 {
         self.left as u16 + self.right as u16
     }
 
     /// Returns the height of the border
+    #[inline]
     pub fn height(&self) -> u16 {
         self.top as u16 + self.bottom as u16
+    }
+
+    /// Returns the size of the top border
+    #[inline]
+    pub fn top(&self) -> u16 {
+        self.top as u16
+    }
+
+    /// Returns the size of the bottom border
+    #[inline]
+    pub fn bottom(&self) -> u16 {
+        self.bottom as u16
+    }
+
+    /// Returns the size of the left border
+    #[inline]
+    pub fn left(&self) -> u16 {
+        self.left as u16
+    }
+
+    /// Returns the size of the right border
+    #[inline]
+    pub fn right(&self) -> u16 {
+        self.right as u16
     }
 }
