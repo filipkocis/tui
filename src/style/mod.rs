@@ -1,16 +1,17 @@
+mod alignment;
+pub mod border;
 mod offset;
 mod padding;
 mod size;
-mod alignment;
 
+pub use alignment::{Align, Justify};
 pub use offset::Offset;
 pub use padding::Padding;
 pub use size::{Size, SizeValue};
-pub use alignment::{Justify, Align};
 
 use crossterm::style::Color;
 
-use crate::text::Text;
+use crate::{Border, text::Text};
 
 #[derive(Debug, Clone, Default)]
 pub struct Style {

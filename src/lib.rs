@@ -23,7 +23,10 @@ pub use geometry::*;
 pub use handler::{EventHandlers, IntoEventHandler};
 pub use line::Line;
 pub use node::{Node, NodeHandle, NodeId, WeakNodeHandle};
-pub use style::{Align, Justify, Offset, Padding, Size, SizeValue, Style};
+pub use style::{
+    Align, Justify, Offset, Padding, Size, SizeValue, Style,
+    border::{self, Border},
+};
 pub use workers::{Message, WorkerContext};
 
 pub use crossterm::{self};
