@@ -1,6 +1,6 @@
 use crossterm::event::{KeyModifiers, MouseEventKind};
 
-use crate::{Action, Context, IntoEventHandler, Node, WeakNodeHandle};
+use crate::{Action, Context, IntoEventHandler, Node, PartialRect, WeakNodeHandle};
 
 #[derive(Debug, Clone)]
 /// Synthetic event for left-click mouse drag events.
@@ -84,20 +84,16 @@ pub struct Draggable;
 impl Draggable {
     /// Constructs a new [`Node`] that can be dragged around if `modifiers` are used during the
     /// left-click drag event, and when it's within node's `area`.
-    /// Area is defined as (min_x, max_x) and (min_y, max_y). Both are optional and separate.
-    pub fn new(
-        area_x: Option<(u16, u16)>,
-        area_y: Option<(u16, u16)>,
-        modifiers: KeyModifiers,
-    ) -> Node {
+    /// Drag area is defined by a `PartialRect` which can be used to restrict the drag area.
+    pub fn new(drag_area: PartialRect, modifiers: KeyModifiers) -> Node {
         let mut node = Node::default();
-        Self::apply(&mut node, area_x, area_y, modifiers, None);
+        Self::apply(&mut node, drag_area, modifiers, None);
         node
     }
 
     /// Applies the draggable behavior to the given `node`.
-    /// The node will be draggable within the specified `area_x` and `area_y` if the `modifiers`
-    /// are used during he left-click drag event.
+    /// The node is draggable if `LMB` is pressed and the `modifiers` match, and only if the mouse
+    /// is within the designated `drag_area`.
     /// If `target` is provided, the drag event will modify the target node's position instead of
     /// the `node` itself.
     /// # Notes
@@ -105,8 +101,7 @@ impl Draggable {
     /// Applying multiple draggable areas to the same node will cause unexpected behavior.
     pub fn apply(
         node: &mut Node,
-        area_x: Option<(u16, u16)>,
-        area_y: Option<(u16, u16)>,
+        drag_area: PartialRect,
         modifiers: KeyModifiers,
         target: Option<WeakNodeHandle>,
     ) {
@@ -118,15 +113,8 @@ impl Draggable {
             }
 
             let (x, y) = drag_event.relative;
-            if let Some(area) = area_x {
-                if x < area.0 || x >= area.1 {
-                    return result;
-                }
-            }
-            if let Some(area) = area_y {
-                if y < area.0 || y >= area.1 {
-                    return result;
-                }
+            if !drag_area.contains(x, y) {
+                return result;
             }
 
             // If a target is specified, modify the target node's position
