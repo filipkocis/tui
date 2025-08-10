@@ -1,6 +1,6 @@
 use crossterm::event::{KeyModifiers, MouseEventKind};
 
-use crate::{Action, Context, IntoEventHandler, Node};
+use crate::{Action, Context, IntoEventHandler, Node, WeakNodeHandle};
 
 #[derive(Debug, Clone)]
 /// Synthetic event for left-click mouse drag events.
@@ -91,13 +91,15 @@ impl Draggable {
         modifiers: KeyModifiers,
     ) -> Node {
         let mut node = Node::default();
-        Self::apply(&mut node, area_x, area_y, modifiers);
+        Self::apply(&mut node, area_x, area_y, modifiers, None);
         node
     }
 
     /// Applies the draggable behavior to the given `node`.
     /// The node will be draggable within the specified `area_x` and `area_y` if the `modifiers`
     /// are used during he left-click drag event.
+    /// If `target` is provided, the drag event will modify the target node's position instead of
+    /// the `node` itself.
     /// # Notes
     /// Areas are restrictive, meaning that if they are `None`, the node can be dragged anywhere.
     /// Applying multiple draggable areas to the same node will cause unexpected behavior.
@@ -106,6 +108,7 @@ impl Draggable {
         area_x: Option<(u16, u16)>,
         area_y: Option<(u16, u16)>,
         modifiers: KeyModifiers,
+        target: Option<WeakNodeHandle>,
     ) {
         let on_drag = move |c: &mut Context, drag_event: MouseDragEvent, node: &mut Node| {
             let mut result = OnDragResult::default();
@@ -126,12 +129,30 @@ impl Draggable {
                 }
             }
 
-            c.app.emmit(Action::RecomputeNode(c.self_weak.clone()));
+            // If a target is specified, modify the target node's position
+            // otherwise modify the node's position directly.
+            if let Some(target) = &target {
+                let Some(target_node) = target.upgrade() else {
+                    return result;
+                };
+                let Ok(mut target_node) = target_node.try_borrow_mut() else {
+                    return result;
+                };
 
-            node.style.offset = node
-                .style
-                .offset
-                .add_without_variant_change(drag_event.delta);
+                target_node.style.offset = target_node
+                    .style
+                    .offset
+                    .add_without_variant_change(drag_event.delta);
+
+                c.app.emmit(Action::RecomputeNode(target.clone()));
+            } else {
+                node.style.offset = node
+                    .style
+                    .offset
+                    .add_without_variant_change(drag_event.delta);
+
+                c.app.emmit(Action::RecomputeNode(c.self_weak.clone()));
+            }
 
             result.stop_propagation = true;
             result.update_hold_x = true;
