@@ -408,7 +408,7 @@ impl App {
     ///
     /// # Usage
     /// `path` must contain the target node as the **first element** and the root node as the
-    /// **last element**. It can be obtained using [`self.get_path_to`](Self::get_path_to).
+    /// **last element**. It can be obtained using [`self.get_path_from`](Self::get_path_from).
     ///
     /// # Safety
     /// No borrows of nodes in the path should be held while calling this method.
